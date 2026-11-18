@@ -1,0 +1,168 @@
+version: "2026.1"
+rules:
+  - id: "SG-IAC-001"
+    title: "AWS Non-EU/Non-CH Region Hardcoded in Infrastructure"
+    provider: "Amazon Web Services, Inc."
+    category: cloud_infrastructure
+    severity: critical
+    jurisdiction: US
+    targets: [iac, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 46"
+        summary: "Provisioning compute, storage, or databases in US/APAC AWS regions causes primary data residency outside EEA."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Cross-border storage outside Switzerland or adequate states requires explicit safeguards."
+    description: "Detects AWS region identifiers outside Europe (us-*, ap-*, ca-*, sa-*, me-*, af-*)."
+    remediation: "Pin AWS provider and resource regions to eu-central-2 (Zurich), eu-central-1 (Frankfurt), or eu-west-1 (Ireland)."
+    matchers:
+      regex_patterns:
+        - "(?i)(region|AWS_REGION|AWS_DEFAULT_REGION)\\s*[:=]\\s*[\"']?(us-(east|west)-[12]|ap-(south|northeast|southeast|east)-[1-3]|ca-central-1|sa-east-1|me-(south|central)-1|af-south-1)[\"']?"
+
+  - id: "SG-IAC-002"
+    title: "Google Cloud Platform Non-European Region"
+    provider: "Google LLC"
+    category: cloud_infrastructure
+    severity: critical
+    jurisdiction: US
+    targets: [iac, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44"
+        summary: "Data stored or processed in GCP US/multi-region US buckets leaves the EEA."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Cross-border disclosure outside Switzerland/EEA requires legal safeguards."
+    description: "Detects GCP regions outside europe-* (e.g., us-central1, us-east1, asia-east1) or US multi-region storage."
+    remediation: "Migrate GCP resources to europe-west6 (Zurich), europe-west1 (Belgium), or europe-west3 (Frankfurt)."
+    matchers:
+      regex_patterns:
+        - "(?i)(region|zone|location|CLOUDSDK_COMPUTE_REGION)\\s*[:=]\\s*[\"']?(us-(central|east|west|south)[1-9](-[a-f])?|northamerica-[a-z0-9-]+|southamerica-[a-z0-9-]+|asia-[a-z0-9-]+|australia-[a-z0-9-]+)[\"']?"
+
+  - id: "SG-IAC-003"
+    title: "Microsoft Azure Non-European Region"
+    provider: "Microsoft Corporation"
+    category: cloud_infrastructure
+    severity: critical
+    jurisdiction: US
+    targets: [iac, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44"
+        summary: "Provisioning Azure resources in US/non-EEA regions violates EU data residency commitments."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Requires Swiss or adequate jurisdiction hosting."
+    description: "Detects Azure location identifiers outside Europe (eastus, westus, centralus, etc.)."
+    remediation: "Set Azure resource location to switzerlandnorth, westeurope, or germanywestcentral."
+    matchers:
+      regex_patterns:
+        - "(?i)(location|ARM_LOCATION|AZURE_REGION)\\s*[:=]\\s*[\"']?(eastus2?|westus[23]?|centralus|northcentralus|southcentralus|eastasia|southeastasia|japaneast|brazilsouth)[\"']?"
+
+  - id: "SG-IAC-004"
+    title: "Cloudflare R2 / Workers Unbounded Jurisdiction"
+    provider: "Cloudflare, Inc."
+    category: cdn_edge
+    severity: medium
+    jurisdiction: US
+    targets: [iac, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 32"
+        summary: "Default Cloudflare R2 buckets without EU jurisdiction hints may replicate objects globally."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Storage jurisdiction must be constrained to EEA/CH."
+    description: "Detects Cloudflare R2 / S3-compatible endpoints without explicit EU jurisdiction sub-domain."
+    remediation: "Enforce Cloudflare R2 Jurisdictional Restrictions set to 'eu' and use the eu.r2.cloudflarestorage.com endpoint."
+    matchers:
+      domains: ["r2.cloudflarestorage.com"]
+      regex_patterns:
+        - "(?i)https?://[a-z0-9-]+\\.r2\\.cloudflarestorage\\.com"
+
+  - id: "SG-IAC-005"
+    title: "Vercel Edge / Serverless Default US Deployment"
+    provider: "Vercel Inc."
+    category: cloud_infrastructure
+    severity: high
+    jurisdiction: US
+    targets: [iac, manifest]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44"
+        summary: "Vercel serverless functions default to iad1 (Washington, D.C.) unless overridden."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Personal data handled in serverless request pipelines must remain in adequate jurisdictions."
+    description: "Detects Vercel configuration or CLI dependencies where US regions (iad1, sfo1, pdx1) are targeted."
+    remediation: "Explicitly pin regions in vercel.json to ['fra1', 'cdg1', 'zrh1'] and verify enterprise EU data residency."
+    matchers:
+      packages: ["vercel", "@vercel/node", "@vercel/edge"]
+      regex_patterns:
+        - "(?i)[\"']regions[\"']\\s*:\\s*\\[[^\\]]*[\"'](iad1|sfo1|pdx1|cle1)[\"']"
+
+  - id: "SG-IAC-006"
+    title: "Supabase Project Hosted Outside EU"
+    provider: "Supabase, Inc."
+    category: cloud_infrastructure
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code, iac]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 28"
+        summary: "Managed PostgreSQL and Auth instances must reside in eu-central-1 / eu-west-1 with an active DPA."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Database hosting jurisdiction must be documented in the ROPA."
+    description: "Detects Supabase SDK usage or hardcoded *.supabase.co project URLs requiring region verification."
+    remediation: "Verify project region is eu-central-1 (Frankfurt) or eu-central-2 (Zurich) and sign the Supabase DPA."
+    matchers:
+      packages: ["@supabase/supabase-js", "supabase"]
+      domains: ["supabase.co"]
+      regex_patterns:
+        - "(?i)https?://[a-z0-9-]+\\.supabase\\.co"
+
+  - id: "SG-IAC-007"
+    title: "MongoDB Atlas Non-EU Cluster Connection"
+    provider: "MongoDB, Inc."
+    category: cloud_infrastructure
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code, iac]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44"
+        summary: "Database clusters storing user records must be pinned to EEA/CH regions."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Cross-border database replication requires legal adequacy."
+    description: "Detects MongoDB Atlas connection strings or Terraform resources."
+    remediation: "Ensure MongoDB Atlas cluster provider region is set to EU_CENTRAL_1 or EU_CENTRAL_2."
+    matchers:
+      packages: ["mongodb", "mongoose", "pymongo"]
+      regex_patterns:
+        - "(?i)mongodb\\+srv://[^\\s\"']+\\.mongodb\\.net"
+
+  - id: "SG-IAC-008"
+    title: "Firebase / Firestore Cloud Backend Integration"
+    provider: "Google LLC"
+    category: cloud_infrastructure
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 28"
+        summary: "Firebase Authentication and Cloud Firestore rely on US Google infrastructure for global identity routing."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Requires Google Cloud Data Processing Addendum and EU multi-region selection."
+    description: "Detects Firebase client/admin SDKs and firebaseio.com endpoints."
+    remediation: "Select eur3 (Europe) multi-region for Firestore and execute the Google Cloud GDPR/nDSG DPA."
+    matchers:
+      packages: ["firebase", "firebase-admin", "@angular/fire", "react-firebase-hooks"]
+      domains: ["firebaseio.com", "firebaseapp.com"]
+      regex_patterns:
+        - "(?i)https?://[a-z0-9-]+\\.firebaseio\\.com"

@@ -1,0 +1,176 @@
+version: "2026.1"
+rules:
+  - id: "SG-AI-001"
+    title: "OpenAI API Cross-Border Data Transfer"
+    provider: "OpenAI OpCo, LLC"
+    category: ai_llm
+    severity: critical
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 46"
+        summary: "Transfer of personal data in prompts/embeddings to US sub-processor requires DPF verification, DPA, and zero-data-retention configuration."
+      - framework: "nDSG"
+        article: "Art. 16 & Art. 17"
+        summary: "Disclosure of personal data abroad requires Federal Council adequacy recognition or approved Standard Contractual Clauses."
+    description: "Detects OpenAI SDK dependencies or direct API calls that transmit prompt payloads to US infrastructure by default."
+    remediation: "Migrate to Azure OpenAI deployed in Sweden Central / Switzerland North with zero-retention enabled, or execute EU/CH DPA with OpenAI EU data residency."
+    matchers:
+      packages: ["openai", "@ai-sdk/openai", "langchain-openai", "async-openai"]
+      domains: ["api.openai.com"]
+      regex_patterns:
+        - "(?i)https?://api\\.openai\\.com/v1"
+
+  - id: "SG-AI-002"
+    title: "Anthropic Claude API Cross-Border Transfer"
+    provider: "Anthropic, PBC"
+    category: ai_llm
+    severity: critical
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 28"
+        summary: "Processor instructions and third-country transfer safeguards required before transmitting user data to US inference endpoints."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Cross-border disclosure to non-whitelisted jurisdictions requires contractual safeguards."
+    description: "Detects Anthropic SDKs or direct calls to api.anthropic.com."
+    remediation: "Route inference through AWS Bedrock in eu-central-1 (Frankfurt) or eu-central-2 (Zurich) under an executed DPA."
+    matchers:
+      packages: ["anthropic", "@anthropic-ai/sdk", "@ai-sdk/anthropic", "langchain-anthropic"]
+      domains: ["api.anthropic.com"]
+      regex_patterns:
+        - "(?i)https?://api\\.anthropic\\.com/v1"
+
+  - id: "SG-AI-003"
+    title: "Cohere LLM API Cross-Border Transfer"
+    provider: "Cohere Inc."
+    category: ai_llm
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44"
+        summary: "General principle for transfers of personal data to third countries."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Cross-border data disclosure restrictions."
+    description: "Detects Cohere SDKs or direct calls to api.cohere.ai / api.cohere.com."
+    remediation: "Deploy Cohere models privately within EU/CH cloud regions or verify adequacy framework coverage."
+    matchers:
+      packages: ["cohere", "cohere-ai", "@ai-sdk/cohere"]
+      domains: ["api.cohere.ai", "api.cohere.com"]
+      regex_patterns:
+        - "(?i)https?://api\\.cohere\\.(ai|com)"
+
+  - id: "SG-AI-004"
+    title: "Hugging Face Hosted Inference API"
+    provider: "Hugging Face, Inc."
+    category: ai_llm
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 46"
+        summary: "Hosted inference endpoints route requests outside EU/CH unless dedicated EU endpoints are explicitly provisioned."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Requires verified cross-border transfer mechanism."
+    description: "Detects Hugging Face Inference API usage against default US-hosted endpoints."
+    remediation: "Self-host open-weights models in EU/CH infrastructure or pin Hugging Face Dedicated Inference Endpoints to eu-west/eu-central."
+    matchers:
+      packages: ["huggingface_hub", "@huggingface/inference"]
+      domains: ["api-inference.huggingface.co"]
+      regex_patterns:
+        - "(?i)https?://api-inference\\.huggingface\\.co"
+
+  - id: "SG-AI-005"
+    title: "Pinecone Vector Database External Hosting"
+    provider: "Pinecone Systems, Inc."
+    category: ai_llm
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code, iac]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 32"
+        summary: "Vector embeddings derived from personal data constitute personal data under GDPR and require EU/CH residency or SCCs."
+      - framework: "nDSG"
+        article: "Art. 16 & Art. 8"
+        summary: "Data security and cross-border disclosure safeguards apply to semantic embeddings."
+    description: "Detects Pinecone vector database clients and non-EU Pinecone index configurations."
+    remediation: "Configure Pinecone serverless indexes exclusively in eu-west-1 / eu-central-1 or self-host Qdrant/pgvector in EU/CH."
+    matchers:
+      packages: ["pinecone-client", "pinecone", "@pinecone-database/pinecone"]
+      domains: ["api.pinecone.io"]
+      regex_patterns:
+        - "(?i)\\.svc\\.(us-east|us-west|gcp-starter)\\.pinecone\\.io"
+
+  - id: "SG-AI-006"
+    title: "Replicate Hosted Model Inference"
+    provider: "Replicate, Inc."
+    category: ai_llm
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44"
+        summary: "Model inputs and outputs traverse US-hosted GPU clusters."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Cross-border disclosure of personal data requires adequacy or SCCs."
+    description: "Detects Replicate client libraries and direct API calls."
+    remediation: "Replace with self-hosted inference containers in EU/CH sovereign cloud."
+    matchers:
+      packages: ["replicate"]
+      domains: ["api.replicate.com"]
+      regex_patterns:
+        - "(?i)https?://api\\.replicate\\.com/v1"
+
+  - id: "SG-AI-007"
+    title: "Groq Cloud LPU Inference Transfer"
+    provider: "Groq, Inc."
+    category: ai_llm
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 46"
+        summary: "Real-time inference prompts sent to US infrastructure."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Cross-border disclosure requirements under Swiss FADP."
+    description: "Detects Groq SDKs and API endpoints."
+    remediation: "Ensure DPA and EU-US/Swiss-US DPF certification cover production workloads, or route to EU-hosted inference."
+    matchers:
+      packages: ["groq", "groq-sdk", "langchain-groq"]
+      domains: ["api.groq.com"]
+      regex_patterns:
+        - "(?i)https?://api\\.groq\\.com/openai/v1"
+
+  - id: "SG-AI-008"
+    title: "DeepSeek API Transfer to China"
+    provider: "Hangzhou DeepSeek Artificial Intelligence Co., Ltd."
+    category: ai_llm
+    severity: critical
+    jurisdiction: CN
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44, Art. 45 & Art. 46"
+        summary: "China lacks an EU adequacy decision; transfers face strict Transfer Impact Assessment (TIA) and local intelligence law risks."
+      - framework: "nDSG"
+        article: "Art. 16 & Art. 17"
+        summary: "China is excluded from the Swiss Federal Council adequacy list; personal data transfers are prohibited without strict safeguards."
+    description: "Detects direct API connections to DeepSeek's mainland China endpoints."
+    remediation: "Block api.deepseek.com at egress; deploy open-weights DeepSeek models on sovereign EU/CH infrastructure."
+    matchers:
+      domains: ["api.deepseek.com"]
+      regex_patterns:
+        - "(?i)https?://api\\.deepseek\\.com"

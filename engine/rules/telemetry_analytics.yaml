@@ -1,0 +1,199 @@
+version: "2026.1"
+rules:
+  - id: "SG-ANA-001"
+    title: "Google Analytics 4 (GA4) Cross-Border Telemetry"
+    provider: "Google LLC"
+    category: analytics_telemetry
+    severity: critical
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44, Art. 6(1)(a) & ePrivacy Art. 5(3)"
+        summary: "Requires explicit prior opt-in consent and exposes client IP/identifiers to Google US servers."
+      - framework: "nDSG"
+        article: "Art. 16 & Art. 19"
+        summary: "Cross-border disclosure of behavioral telemetry requires transparent privacy notice and safeguards."
+    description: "Detects Google Analytics / gtag.js / GA4 Measurement Protocol integrations."
+    remediation: "Gate script execution behind granular CMP opt-in consent, enable server-side GTM in EU/CH with IP stripping, or switch to Plausible/Matomo EU."
+    matchers:
+      packages: ["react-ga4", "@next/third-parties", "vue-gtag"]
+      domains: ["www.google-analytics.com", "analytics.google.com", "www.googletagmanager.com"]
+      regex_patterns:
+        - "(?i)https?://(www\\.)?(google-analytics|googletagmanager)\\.com"
+        - "(?i)\\bG-[A-Z0-9]{10}\\b"
+
+  - id: "SG-ANA-002"
+    title: "Twilio Segment Customer Data Platform (CDP)"
+    provider: "Twilio Inc. (Segment)"
+    category: analytics_telemetry
+    severity: critical
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 5(1)(b)"
+        summary: "CDP pipelines aggregate user traits and fan out PII to downstream US sub-processors."
+      - framework: "nDSG"
+        article: "Art. 16 & Art. 19"
+        summary: "All downstream Segment destinations must be audited and disclosed."
+    description: "Detects Segment analytics libraries and default US ingestion endpoint (api.segment.io)."
+    remediation: "Configure Segment EU Workspace (events.eu1.segmentapis.com) and enforce consent-based destination filtering."
+    matchers:
+      packages: ["@segment/analytics-next", "@segment/analytics-node", "segment-analytics-python", "analytics-node"]
+      domains: ["api.segment.io", "cdn.segment.com"]
+      regex_patterns:
+        - "(?i)https?://(api|cdn)\\.segment\\.(io|com)"
+
+  - id: "SG-ANA-003"
+    title: "Mixpanel Product Analytics US Ingestion"
+    provider: "Mixpanel, Inc."
+    category: analytics_telemetry
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 6(1)(a)"
+        summary: "Behavioral event streams and user profiles default to api.mixpanel.com (US) unless EU data residency is configured."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Cross-border behavioral tracking requires legal transfer basis."
+    description: "Detects Mixpanel SDKs and US API ingestion endpoints."
+    remediation: "Provision Mixpanel EU Residency project and set serverURL to https://api-eu.mixpanel.com."
+    matchers:
+      packages: ["mixpanel", "mixpanel-browser", "mixpanel-py"]
+      domains: ["api.mixpanel.com", "api-js.mixpanel.com"]
+      regex_patterns:
+        - "(?i)https?://api(-js)?\\.mixpanel\\.com"
+
+  - id: "SG-ANA-004"
+    title: "Amplitude Product Analytics US Ingestion"
+    provider: "Amplitude, Inc."
+    category: analytics_telemetry
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 6(1)(a)"
+        summary: "Event telemetry defaults to US servers (api2.amplitude.com) unless EU server zone is explicitly set."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Requires EU zone configuration or valid transfer safeguards."
+    description: "Detects Amplitude SDKs and default US ingestion domains."
+    remediation: "Configure Amplitude SDK with serverZone: 'EU' (api.eu.amplitude.com) and gate initialization on user consent."
+    matchers:
+      packages: ["@amplitude/analytics-browser", "@amplitude/analytics-node", "amplitude-analytics"]
+      domains: ["api2.amplitude.com", "api.amplitude.com"]
+      regex_patterns:
+        - "(?i)https?://api2?\\.amplitude\\.com"
+
+  - id: "SG-ANA-005"
+    title: "PostHog US Cloud Telemetry Ingestion"
+    provider: "PostHog, Inc."
+    category: analytics_telemetry
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44"
+        summary: "Default us.i.posthog.com / app.posthog.com ingests session recordings and events in US cloud."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Session replay and event telemetry must target EU cloud or self-hosted CH/EU instances."
+    description: "Detects PostHog SDKs and US cloud ingestion hosts."
+    remediation: "Switch api_host to https://eu.i.posthog.com (Frankfurt) or self-host PostHog on sovereign EU/CH infrastructure."
+    matchers:
+      packages: ["posthog-js", "posthog-node", "posthog"]
+      domains: ["us.i.posthog.com", "app.posthog.com"]
+      regex_patterns:
+        - "(?i)https?://(us\\.i|app)\\.posthog\\.com"
+
+  - id: "SG-ANA-006"
+    title: "Hotjar / Contentsquare Session Replay & Heatmaps"
+    provider: "Hotjar Ltd. / Contentsquare"
+    category: analytics_telemetry
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 6(1)(a), Art. 25 & Art. 44"
+        summary: "DOM session recordings risk capturing unmasked PII and require strict prior opt-in consent."
+      - framework: "nDSG"
+        article: "Art. 6 & Art. 16"
+        summary: "Privacy-by-default requires suppressing sensitive DOM inputs and obtaining valid consent."
+    description: "Detects Hotjar tracking scripts and packages."
+    remediation: "Suppress all input fields (data-hj-suppress), block execution before CMP consent, and verify EU sub-processor routing."
+    matchers:
+      packages: ["@hotjar/browser", "react-hotjar"]
+      domains: ["static.hotjar.com", "script.hotjar.com"]
+      regex_patterns:
+        - "(?i)https?://(static|script)\\.hotjar\\.com"
+
+  - id: "SG-ANA-007"
+    title: "Meta / Facebook Pixel Cross-Border Ad Tracking"
+    provider: "Meta Platforms, Inc."
+    category: analytics_telemetry
+    severity: critical
+    jurisdiction: US
+    targets: [source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44, Art. 26 & Art. 6(1)(a)"
+        summary: "Joint controllership with Meta Platforms Ireland/US and high-risk transatlantic ad-tech data sharing."
+      - framework: "nDSG"
+        article: "Art. 16 & Art. 19"
+        summary: "Behavioral profiling and cross-border disclosure to Meta require explicit consent and privacy policy disclosure."
+    description: "Detects Meta Pixel (fbevents.js) and Facebook Conversions API endpoints."
+    remediation: "Remove Meta Pixel from authenticated/sensitive routes and require explicit marketing cookie opt-in prior to loading connect.facebook.net."
+    matchers:
+      domains: ["connect.facebook.net", "graph.facebook.com"]
+      regex_patterns:
+        - "(?i)https?://connect\\.facebook\\.net/[a-z_A-Z]+/fbevents\\.js"
+        - "(?i)\\bfb(q|PixelId)\\b"
+
+  - id: "SG-ERR-001"
+    title: "Sentry Error & Performance Telemetry (US Default)"
+    provider: "Functional Software, Inc. (Sentry)"
+    category: error_monitoring
+    severity: medium
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 32"
+        summary: "Stack traces, request payloads, and user IPs route to sentry.io (US) unless de.sentry.io (EU) is configured."
+      - framework: "nDSG"
+        article: "Art. 16 & Art. 8"
+        summary: "PII scrubbing in stack traces and EU data residency recommended."
+    description: "Detects Sentry SDKs and US ingest DSNs (*.ingest.us.sentry.io or *.ingest.sentry.io)."
+    remediation: "Migrate Sentry organization to Sentry EU (de.sentry.io), disable sendDefaultPii, and configure beforeSend PII scrubbing."
+    matchers:
+      packages: ["@sentry/node", "@sentry/nextjs", "@sentry/react", "@sentry/browser", "sentry-sdk", "sentry"]
+      regex_patterns:
+        - "(?i)https?://[a-f0-9]+@[a-z0-9-]+\\.ingest\\.(us\\.)?sentry\\.io"
+
+  - id: "SG-ERR-002"
+    title: "Datadog Observability & APM (US1 Default Site)"
+    provider: "Datadog, Inc."
+    category: error_monitoring
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code, iac]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44"
+        summary: "Logs, APM traces, and RUM sessions default to datadoghq.com (US1) unless site is set to datadoghq.eu (EU1)."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Log aggregation outside EU/CH requires cross-border safeguards."
+    description: "Detects Datadog agents, RUM/APM SDKs, and US site domains (datadoghq.com)."
+    remediation: "Set DD_SITE=datadoghq.eu (Frankfurt) across all agents/SDKs and configure log obfuscation rules for PII."
+    matchers:
+      packages: ["dd-trace", "ddtrace", "@datadog/browser-rum", "@datadog/browser-logs"]
+      domains: ["http-intake.logs.datadoghq.com", "browser-intake-datadoghq.com"]
+      regex_patterns:
+        - "(?i)https?://[a-z0-9.-]+\\.datadoghq\\.com"

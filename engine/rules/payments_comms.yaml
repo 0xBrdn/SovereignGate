@@ -1,0 +1,198 @@
+version: "2026.1"
+rules:
+  - id: "SG-PAY-001"
+    title: "Stripe Payment Processing & Billing Sub-Processor"
+    provider: "Stripe, Inc."
+    category: payments_billing
+    severity: medium
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 28"
+        summary: "Payment metadata, customer emails, and IP addresses are processed by Stripe Payments Europe and Stripe, Inc. (US)."
+      - framework: "nDSG"
+        article: "Art. 16 & Art. 19"
+        summary: "Sub-processor disclosure must be listed in Privacy Notice and ROPA."
+    description: "Detects Stripe SDKs and direct calls to api.stripe.com."
+    remediation: "Ensure Stripe Payments Europe, Ltd. is contracting entity, list Stripe in ROPA, and verify EU-US/Swiss-US DPF coverage."
+    matchers:
+      packages: ["stripe", "@stripe/stripe-js", "@stripe/react-stripe-js", "stripe-go"]
+      domains: ["api.stripe.com", "js.stripe.com"]
+      regex_patterns:
+        - "(?i)https?://api\\.stripe\\.com/v1"
+
+  - id: "SG-PAY-002"
+    title: "Braintree / PayPal Payment Gateway"
+    provider: "PayPal Holdings, Inc."
+    category: payments_billing
+    severity: medium
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 13"
+        summary: "Cross-border payment telemetry transfers require privacy notice disclosure and Binding Corporate Rules (BCRs)."
+      - framework: "nDSG"
+        article: "Art. 16 & Art. 19"
+        summary: "Disclosure of recipients abroad required at data collection."
+    description: "Detects Braintree and PayPal Checkout SDKs."
+    remediation: "Contract via PayPal (Europe) S.a.r.l. et Cie, S.C.A. and document BCR safeguards in ROPA."
+    matchers:
+      packages: ["braintree", "braintree-web", "@paypal/checkout-server-sdk", "@paypal/react-paypal-js"]
+      domains: ["api.braintreegateway.com", "api-m.paypal.com"]
+      regex_patterns:
+        - "(?i)https?://api(-m)?\\.(braintreegateway|paypal)\\.com"
+
+  - id: "SG-COM-001"
+    title: "Twilio SMS & Voice Communications Transfer"
+    provider: "Twilio Inc."
+    category: communications
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 32"
+        summary: "Phone numbers (PII) and message bodies route through Twilio US signaling infrastructure by default."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Cross-border transfer of telecommunications metadata requires BCRs/SCCs."
+    description: "Detects Twilio SDKs and calls to api.twilio.com."
+    remediation: "Enable Twilio Edge Locations in Dublin/Frankfurt (ie1/de1), activate Message Body Redaction, and reference Twilio BCRs."
+    matchers:
+      packages: ["twilio", "twilio-node"]
+      domains: ["api.twilio.com"]
+      regex_patterns:
+        - "(?i)https?://api\\.twilio\\.com/2010-04-01"
+
+  - id: "SG-COM-002"
+    title: "Twilio SendGrid Transactional Email Transfer"
+    provider: "Twilio Inc. (SendGrid)"
+    category: communications
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44"
+        summary: "Recipient email addresses and email contents are processed on US servers unless SendGrid EU Data Residency is enabled."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Cross-border disclosure of customer email addresses requires legal safeguards."
+    description: "Detects SendGrid libraries and api.sendgrid.com endpoints."
+    remediation: "Migrate to SendGrid EU Regional Subuser (api.eu.sendgrid.com) or an EU/CH transactional provider (Postmark EU, Mailjet, Infomaniak)."
+    matchers:
+      packages: ["sendgrid", "@sendgrid/mail", "sendgrid-go"]
+      domains: ["api.sendgrid.com"]
+      regex_patterns:
+        - "(?i)https?://api\\.sendgrid\\.com/v3"
+
+  - id: "SG-COM-003"
+    title: "Mailgun US Endpoint Usage"
+    provider: "Sinch AB (Mailgun Technologies, Inc.)"
+    category: communications
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44"
+        summary: "Default api.mailgun.net routes email payloads to US data centers."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Requires EU endpoint pinning to avoid US transfer."
+    description: "Detects Mailgun SDKs and default US API domain (api.mailgun.net)."
+    remediation: "Switch base URL explicitly to https://api.eu.mailgun.net/v3 and provision domain in Mailgun EU region."
+    matchers:
+      packages: ["mailgun.js", "mailgun-js", "mailgun-go"]
+      domains: ["api.mailgun.net"]
+      regex_patterns:
+        - "(?i)https?://api\\.mailgun\\.net/v3"
+
+  - id: "SG-COM-004"
+    title: "Resend Transactional Email API"
+    provider: "Plus Five Five, Inc. (Resend)"
+    category: communications
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 28"
+        summary: "Email payloads and recipient PII are processed via US API infrastructure."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Cross-border transfer safeguards required."
+    description: "Detects Resend SDKs and api.resend.com calls."
+    remediation: "Execute Resend DPA with SCCs or use an EU/CH-sovereign SMTP/API relay."
+    matchers:
+      packages: ["resend"]
+      domains: ["api.resend.com"]
+      regex_patterns:
+        - "(?i)https?://api\\.resend\\.com"
+
+  - id: "SG-COM-005"
+    title: "Intercom Customer Messaging & Support Widget"
+    provider: "Intercom, Inc."
+    category: communications
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 6(1)(a)"
+        summary: "Support chat transcripts and user traits sync to US hosting unless EU workspace hosting is selected at creation."
+      - framework: "nDSG"
+        article: "Art. 16 & Art. 19"
+        summary: "Requires EU hosting region or DPF/SCC disclosure."
+    description: "Detects Intercom SDKs and default US widget/API endpoints."
+    remediation: "Ensure workspace is provisioned in Intercom EU Hosting (api-iam.eu.intercom.io) and gate widget loading behind consent."
+    matchers:
+      packages: ["intercom-client", "react-use-intercom", "@intercom/messenger-js-sdk"]
+      domains: ["api-iam.intercom.io", "widget.intercom.io"]
+      regex_patterns:
+        - "(?i)https?://(api-iam|widget)\\.intercom\\.io"
+
+  - id: "SG-AUTH-001"
+    title: "Auth0 Identity Provider Cross-Border Directory"
+    provider: "Okta, Inc. (Auth0)"
+    category: auth_identity
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 32"
+        summary: "User credentials, emails, and login IP logs are stored in Auth0 tenant region."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Identity directory outside CH/EEA requires adequacy or SCCs."
+    description: "Detects Auth0 SDKs and non-EU *.us.auth0.com tenant domains."
+    remediation: "Ensure Auth0 tenant uses EU Frankfurt (*.eu.auth0.com) or self-host Keycloak / Ory Kratos in EU/CH."
+    matchers:
+      packages: ["@auth0/auth0-react", "@auth0/nextjs-auth0", "auth0", "auth0-python"]
+      regex_patterns:
+        - "(?i)[a-z0-9-]+\\.us\\.auth0\\.com"
+
+  - id: "SG-AUTH-002"
+    title: "Clerk Managed Authentication Service"
+    provider: "Clerk, Inc."
+    category: auth_identity
+    severity: high
+    jurisdiction: US
+    targets: [manifest, source_code]
+    legal_references:
+      - framework: "GDPR"
+        article: "Art. 44 & Art. 28"
+        summary: "Core identity graph and session metadata are hosted on US infrastructure."
+      - framework: "nDSG"
+        article: "Art. 16"
+        summary: "Cross-border identity storage requires DPA and transfer safeguards."
+    description: "Detects Clerk authentication libraries and API domains."
+    remediation: "Verify Clerk DPA and DPF status, or migrate authentication to EU/CH-hosted Keycloak or ZITADEL (Swiss)."
+    matchers:
+      packages: ["@clerk/nextjs", "@clerk/clerk-react", "@clerk/backend", "clerk-sdk-python"]
+      domains: ["api.clerk.com", "api.clerk.dev"]
+      regex_patterns:
+        - "(?i)https?://api\\.clerk\\.(com|dev)"
