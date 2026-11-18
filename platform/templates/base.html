@@ -14,14 +14,11 @@
   <link rel="stylesheet" href="{% static 'css/design-system.css' %}" />
 </head>
 <body class="min-h-screen bg-[#FAFAFA] text-[#09090B]" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-  <!-- Global HTMX Top Progress Hairline -->
   <div id="global-htmx-bar" class="htmx-indicator fixed top-0 left-0 right-0 h-[2px] bg-zinc-950 z-50"></div>
 
   <div class="min-h-screen flex">
-    <!-- Left Swiss Rail Navigation -->
     <aside class="w-64 shrink-0 bg-[#09090B] text-zinc-200 border-r border-[#27272A] flex flex-col justify-between select-none">
       <div>
-        <!-- Brand Header -->
         <div class="h-14 px-4 border-b border-[#27272A] flex items-center justify-between">
           <a href="{% url 'compliance:dashboard' %}" class="flex items-center gap-2.5">
             <span class="w-6 h-6 bg-white text-zinc-950 rounded-sm flex items-center justify-center font-mono-code text-xs font-bold tracking-tighter">
@@ -34,7 +31,6 @@
           </span>
         </div>
 
-        <!-- Organization Switcher -->
         <div class="p-3 border-b border-[#27272A]" x-data="{ open: false }">
           <div class="text-[10px] font-mono-code uppercase tracking-wider text-zinc-500 px-1.5 mb-1">
             Data Controller / Tenant
@@ -87,7 +83,6 @@
           {% endif %}
         </div>
 
-        <!-- Primary Navigation -->
         <nav class="p-3 space-y-1">
           <div class="text-[10px] font-mono-code uppercase tracking-wider text-zinc-500 px-2 py-1">
             Compliance Telemetry
@@ -116,10 +111,24 @@
             <span>CI/CD Scan Runs</span>
             <span class="font-mono-code text-[10px] text-zinc-500">SARIF</span>
           </a>
+
+          {% if active_org %}
+            <div class="pt-3 mt-3 border-t border-zinc-800">
+              <div class="text-[10px] font-mono-code uppercase tracking-wider text-zinc-500 px-2 py-1">
+                Regulatory Deliverables
+              </div>
+              <a
+                href="{% url 'compliance:export_ropa_pdf' %}"
+                class="flex items-center justify-between px-2.5 py-2 rounded-sm text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-900 transition-colors"
+              >
+                <span>Export ROPA PDF</span>
+                <span class="font-mono-code text-[10px] text-emerald-400">Art. 30</span>
+              </a>
+            </div>
+          {% endif %}
         </nav>
       </div>
 
-      <!-- Footer User & Legal Regime -->
       <div class="p-3 border-t border-[#27272A] space-y-2.5">
         <div class="px-2 py-1.5 bg-zinc-900/80 border border-zinc-800 rounded-sm">
           <div class="flex items-center justify-between text-[10px] font-mono-code text-zinc-400">
@@ -154,9 +163,7 @@
       </div>
     </aside>
 
-    <!-- Main Content Viewport -->
     <div class="flex-1 flex flex-col min-w-0">
-      <!-- Top Context Header -->
       <header class="h-14 bg-white border-b border-zinc-200 px-6 flex items-center justify-between shrink-0">
         <div class="flex items-center gap-3">
           <h1 class="text-sm font-semibold tracking-tight text-zinc-950">
@@ -173,53 +180,11 @@
         </div>
       </header>
 
-      <!-- Workspace Canvas -->
       <main class="flex-1 p-6 max-w-[1440px] w-full mx-auto">
         {% if no_org_assigned %}
           {% include "partials/empty_state.html" with title="No Tenant Organization Linked" description="Ask your administrator to assign your user account to an Organization in Django Admin before inspecting scan runs." %}
         {% else %}
-          {% block content %}
-            <!-- Default KPI Summary Strip -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <div class="sg-card p-4">
-                <div class="text-[11px] font-mono-code uppercase tracking-wider text-zinc-500">Critical Violations</div>
-                <div class="mt-2 flex items-baseline justify-between">
-                  <span class="text-2xl font-semibold tabular-nums {% if critical_total > 0 %}text-red-600{% else %}text-zinc-950{% endif %}">
-                    {{ critical_total|default:0 }}
-                  </span>
-                  <span class="text-[11px] font-mono-code text-zinc-400">Art. 44 / Art. 16</span>
-                </div>
-              </div>
-
-              <div class="sg-card p-4">
-                <div class="text-[11px] font-mono-code uppercase tracking-wider text-zinc-500">High Risk Flows</div>
-                <div class="mt-2 flex items-baseline justify-between">
-                  <span class="text-2xl font-semibold tabular-nums text-zinc-950">{{ high_total|default:0 }}</span>
-                  <span class="text-[11px] font-mono-code text-zinc-400">DPA / TIA REQ</span>
-                </div>
-              </div>
-
-              <div class="sg-card p-4">
-                <div class="text-[11px] font-mono-code uppercase tracking-wider text-zinc-500">US Sub-Processors</div>
-                <div class="mt-2 flex items-baseline justify-between">
-                  <span class="text-2xl font-semibold tabular-nums text-zinc-950">{{ us_transfers_total|default:0 }}</span>
-                  <span class="text-[11px] font-mono-code text-zinc-400">DPF / SCC</span>
-                </div>
-              </div>
-
-              <div class="sg-card p-4">
-                <div class="text-[11px] font-mono-code uppercase tracking-wider text-zinc-500">Audited Repositories</div>
-                <div class="mt-2 flex items-baseline justify-between">
-                  <span class="text-2xl font-semibold tabular-nums text-zinc-950">{{ repo_count|default:0 }}</span>
-                  <span class="text-[11px] font-mono-code text-zinc-400">ACTIVE</span>
-                </div>
-              </div>
-            </div>
-
-            {% if not findings %}
-              {% include "partials/empty_state.html" %}
-            {% endif %}
-          {% endblock %}
+          {% block content %}{% endblock %}
         {% endif %}
       </main>
     </div>

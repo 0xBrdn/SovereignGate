@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ document_ref }} — Record of Processing Activities (ROPA)</title>
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 14mm 14mm 16mm 14mm;
+      @top-left {
+        content: "SOVEREIGNGATE · RECORD OF PROCESSING ACTIVITIES (ART. 30 GDPR / ART. 12 nDSG)";
+        font-family: "JetBrains Mono", monospace;
+        font-size: 7.5pt;
+        color: #71717A;
+      }
+      @top-right {
+        content: "{{ document_ref }}";
+        font-family: "JetBrains Mono", monospace;
+        font-size: 7.5pt;
+        color: #71717A;
+      }
+      @bottom-left {
+        content: "CONFIDENTIAL — DATA CONTROLLER: {{ organization.name|upper }}";
+        font-family: "JetBrains Mono", monospace;
+        font-size: 7.5pt;
+        color: #71717A;
+      }
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 7.5pt;
+        color: #09090B;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      font-size: 9pt;
+      line-height: 1.4;
+      color: #09090B;
+      background: #FFFFFF;
+    }
+
+    .mono {
+      font-family: "JetBrains Mono", "Courier New", monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .header-block {
+      border-bottom: 2px solid #09090B;
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .brand-tag {
+      display: inline-block;
+      background: #09090B;
+      color: #FFFFFF;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8pt;
+      font-weight: 700;
+      padding: 2px 6px;
+      letter-spacing: 0.04em;
+      margin-bottom: 5px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 16pt;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #09090B;
+    }
+
+    .subtitle {
+      margin: 2px 0 0 0;
+      font-size: 8.5pt;
+      color: #52525B;
+    }
+
+    .meta-grid {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 14px;
+      border: 1px solid #D4D4D8;
+    }
+
+    .meta-grid td {
+      padding: 6px 9px;
+      border: 1px solid #E4E4E7;
+      vertical-align: top;
+      font-size: 8.5pt;
+    }
+
+    .meta-label {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7pt;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #71717A;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .kpi-strip {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+
+    .kpi-strip td {
+      width: 20%;
+      border: 1px solid #09090B;
+      padding: 7px 10px;
+      background: #FAFAFA;
+    }
+
+    .kpi-value {
+      font-size: 14pt;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: #09090B;
+    }
+
+    .kpi-value.alert {
+      color: #B91C1C;
+    }
+
+    h2 {
+      font-size: 10.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid #09090B;
+      padding-bottom: 4px;
+      margin: 16px 0 8px 0;
+      page-break-after: avoid;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 14px;
+      font-size: 8pt;
+    }
+
+    table.data-table th {
+      background: #09090B;
+      color: #FFFFFF;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 6px 7px;
+      text-align: left;
+      border: 1px solid #09090B;
+    }
+
+    table.data-table td {
+      padding: 5px 7px;
+      border: 1px solid #D4D4D8;
+      vertical-align: top;
+      word-wrap: break-word;
+    }
+
+    table.data-table tr:nth-child(even) td {
+      background: #FAFAFA;
+    }
+
+    table.data-table tr {
+      page-break-inside: avoid;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 1px 5px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7pt;
+      font-weight: 600;
+      border: 1px solid #D4D4D8;
+      background: #F4F4F5;
+      color: #09090B;
+    }
+
+    .badge-crit {
+      background: #FEF2F2;
+      border-color: #FECACA;
+      color: #991B1B;
+    }
+
+    .badge-high {
+      background: #FFFBEB;
+      border-color: #FDE68A;
+      color: #92400E;
+    }
+
+    .badge-ok {
+      background: #ECFDF5;
+      border-color: #A7F3D0;
+      color: #065F46;
+    }
+
+    .signoff-box {
+      margin-top: 18px;
+      border: 1px solid #09090B;
+      padding: 10px 12px;
+      background: #FAFAFA;
+      page-break-inside: avoid;
+    }
+
+    .signoff-grid {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+    }
+
+    .signoff-grid td {
+      width: 33.3%;
+      padding-right: 18px;
+      font-size: 8pt;
+      color: #52525B;
+    }
+
+    .sig-line {
+      border-top: 1px solid #09090B;
+      padding-top: 4px;
+      margin-top: 22px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.5pt;
+      color: #09090B;
+    }
+  </style>
+</head>
+<body>
+  <div class="header-block">
+    <div>
+      <span class="brand-tag">SOVEREIGNGATE · AUTOMATED REGULATORY EVIDENCE</span>
+      <h1>Record of Processing Activities &amp; Cross-Border Data Flow Audit</h1>
+      <p class="subtitle">
+        Generated in accordance with Art. 30 &amp; Art. 44–49 EU GDPR (Regulation 2016/679) and Art. 12 &amp; Art. 16–17 Swiss nDSG (SR 235.1)
+      </p>
+    </div>
+    <div style="text-align: right;">
+      <div class="mono" style="font-size: 8.5pt; font-weight: 700;">{{ document_ref }}</div>
+      <div class="mono" style="font-size: 7.5pt; color: #52525B;">
+        Issued: {{ generated_at|date:"Y-m-d H:i" }} UTC
+      </div>
+    </div>
+  </div>
+
+  <!-- Controller & DPO Metadata -->
+  <table class="meta-grid">
+    <tr>
+      <td style="width: 28%;">
+        <span class="meta-label">Data Controller Entity</span>
+        <strong>{{ organization.name }}</strong> ({{ organization.headquarters_country }})
+      </td>
+      <td style="width: 24%;">
+        <span class="meta-label">Applicable Regulatory Regime</span>
+        <span class="mono">{{ organization.get_primary_regime_display }}</span>
+      </td>
+      <td style="width: 26%;">
+        <span class="meta-label">Designated DPO / Privacy Contact</span>
+        {% if organization.dpo_name or organization.dpo_email %}
+          {{ organization.dpo_name }} {% if organization.dpo_email %}&lt;{{ organization.dpo_email }}&gt;{% endif %}
+        {% else %}
+          <span style="color: #71717A;">Not specified in tenant profile</span>
+        {% endif %}
+      </td>
+      <td style="width: 22%;">
+        <span class="meta-label">Report Generated By</span>
+        <span class="mono">{{ generated_by.email }}</span>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Executive Telemetry Summary -->
+  <table class="kpi-strip">
+    <tr>
+      <td>
+        <span class="meta-label">Audited Codebases</span>
+        <span class="kpi-value">{{ summary.total_repositories }}</span>
+      </td>
+      <td>
+        <span class="meta-label">External Sub-Processors</span>
+        <span class="kpi-value">{{ summary.total_subprocessors }}</span>
+      </td>
+      <td>
+        <span class="meta-label">Open Critical Findings</span>
+        <span class="kpi-value {% if summary.critical_open > 0 %}alert{% endif %}">{{ summary.critical_open }}</span>
+      </td>
+      <td>
+        <span class="meta-label">Open High Findings</span>
+        <span class="kpi-value {% if summary.high_open > 0 %}alert{% endif %}">{{ summary.high_open }}</span>
+      </td>
+      <td>
+        <span class="meta-label">DPA / Safeguard Verified</span>
+        <span class="kpi-value">{{ summary.dpa_verified_total }}</span>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Section 1: Cross-Border Sub-Processor Register (ROPA) -->
+  <h2>1. Cross-Border Sub-Processor Register &amp; Transfer Safeguards (Art. 30(1)(d)–(e) GDPR · Art. 12(2)(d)–(e) nDSG)</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width: 8%;">Ref ID</th>
+        <th style="width: 18%;">Sub-Processor / Recipient</th>
+        <th style="width: 8%;">Country</th>
+        <th style="width: 13%;">Processing Purpose</th>
+        <th style="width: 15%;">Legal Basis</th>
+        <th style="width: 24%;">Cross-Border Transfer Mechanism</th>
+        <th style="width: 14%;">Governance Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in ropa_entries %}
+        <tr>
+          <td class="mono">{{ item.activity_code }}</td>
+          <td>
+            <strong>{{ item.provider }}</strong>
+            <div class="mono" style="font-size: 7pt; color: #52525B; margin-top: 2px;">
+              Repos: {{ item.repositories }} ({{ item.total_refs }} refs)
+            </div>
+          </td>
+          <td class="mono"><strong>{{ item.jurisdiction }}</strong></td>
+          <td class="mono" style="font-size: 7.5pt;">{{ item.category }}</td>
+          <td class="mono" style="font-size: 7.5pt;">{{ item.legal_article }}</td>
+          <td style="font-size: 7.5pt;">{{ item.safeguard_mechanism }}</td>
+          <td>
+            {% if item.open_refs > 0 %}
+              <span class="badge badge-crit">{{ item.open_refs }} OPEN</span>
+            {% else %}
+              <span class="badge badge-ok">VERIFIED ({{ item.verified_refs }})</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="7" style="text-align: center; color: #52525B; padding: 12px;">
+            No external sub-processors or cross-border data transfers detected in latest repository baselines.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Section 2: Unmitigated Critical & High-Risk Code Evidence -->
+  <h2>2. Unmitigated High-Risk &amp; Critical Technical Findings Requiring Remediation</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width: 8%;">Severity</th>
+        <th style="width: 9%;">Rule ID</th>
+        <th style="width: 18%;">Sub-Processor</th>
+        <th style="width: 27%;">Repository &amp; Source File</th>
+        <th style="width: 38%;">Required Technical / Legal Remediation</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in unmitigated_findings %}
+        <tr>
+          <td>
+            {% if f.severity == "critical" %}
+              <span class="badge badge-crit">CRITICAL</span>
+            {% else %}
+              <span class="badge badge-high">HIGH</span>
+            {% endif %}
+          </td>
+          <td class="mono">{{ f.rule_id }}</td>
+          <td>
+            <strong>{{ f.provider }}</strong>
+            <div class="mono" style="font-size: 7pt; color: #52525B;">{{ f.jurisdiction }} · {{ f.primary_legal_article }}</div>
+          </td>
+          <td class="mono" style="font-size: 7.5pt;">
+            {{ f.scan_run.repository.name }}/{{ f.file_path }}:{{ f.line_number }}
+          </td>
+          <td style="font-size: 7.5pt;">{{ f.remediation }}</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="5" style="text-align: center; color: #065F46; padding: 10px;">
+            PASS — Zero unmitigated Critical or High severity cross-border transfer violations remain open.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Section 3: Audited Repository Baselines -->
+  <h2>3. Audited Software Repositories &amp; Cryptographic Scan Baselines</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width: 24%;">Repository</th>
+        <th style="width: 14%;">Branch / Commit</th>
+        <th style="width: 18%;">Data Classification</th>
+        <th style="width: 12%;">Baseline Status</th>
+        <th style="width: 16%;">Findings (C / H / M)</th>
+        <th style="width: 16%;">Last Audited (UTC)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for repo in repo_rows %}
+        <tr>
+          <td><strong>{{ repo.name }}</strong></td>
+          <td class="mono" style="font-size: 7.5pt;">{{ repo.branch }} @ {{ repo.commit_sha }}</td>
+          <td class="mono" style="font-size: 7.5pt;">{{ repo.data_classification }}</td>
+          <td>
+            {% if repo.status == "fail" %}
+              <span class="badge badge-crit">FAIL</span>
+            {% elif repo.status == "warn" %}
+              <span class="badge badge-high">WARN</span>
+            {% elif repo.status == "pass" %}
+              <span class="badge badge-ok">PASS</span>
+            {% else %}
+              <span class="badge">UNSCANNED</span>
+            {% endif %}
+          </td>
+          <td class="mono">{{ repo.critical }} / {{ repo.high }} / {{ repo.medium }}</td>
+          <td class="mono" style="font-size: 7.5pt;">
+            {% if repo.scanned_at %}{{ repo.scanned_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="6" style="text-align: center; color: #52525B; padding: 10px;">
+            No repositories registered under this tenant organization.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Regulatory Attestation & Sign-Off Block -->
+  <div class="signoff-box">
+    <div class="mono" style="font-size: 7.5pt; font-weight: 700; text-transform: uppercase;">
+      Controller &amp; Data Protection Officer Attestation
+    </div>
+    <p style="margin: 4px 0 0 0; font-size: 8pt; color: #3F3F46;">
+      This automated Record of Processing Activities (ROPA) was deterministically compiled from static source code, dependency manifest, and Infrastructure-as-Code telemetry by SovereignGate. It serves as technical evidence for supervisory authorities (FDPIC / EDÖB in Switzerland; EU DPAs under GDPR Art. 30).
+    </p>
+    <table class="signoff-grid">
+      <tr>
+        <td><div class="sig-line">Data Protection Officer (DPO) Signature &amp; Date</div></td>
+        <td><div class="sig-line">Chief Technology Officer / Engineering Lead</div></td>
+        <td><div class="sig-line">Supervisory Authority Reference (Optional)</div></td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

@@ -2,10 +2,11 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count, OuterRef, Q, Subquery
 from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from accounts.models import Organization
 from compliance.models import Finding, Repository, ScanRun
+from compliance.pdf_export import render_ropa_pdf
 
 
 def _get_active_org(request: HttpRequest) -> Organization | None:
@@ -195,4 +196,21 @@ def update_finding_resolution(request: HttpRequest, finding_id) -> HttpResponse:
         },
     )
     response["HX-Trigger"] = "findingsUpdated"
+    return response
+
+
+@login_required
+@require_GET
+def export_ropa_pdf(request: HttpRequest) -> HttpResponse:
+    active_org = _get_active_org(request)
+    if active_org is None:
+        return HttpResponseBadRequest("No active organization selected.")
+
+    pdf_bytes, filename = render_ropa_pdf(
+        organization=active_org,
+        generated_by=request.user,
+        base_url=request.build_absolute_uri("/"),
+    )
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response

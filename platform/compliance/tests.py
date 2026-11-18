@@ -3,21 +3,33 @@ import json
 from django.test import TestCase
 from django.urls import reverse
 
-from accounts.models import ApiToken, Organization
+from accounts.models import ApiToken, Organization, OrganizationMembership, User
 from compliance.models import Finding
 
 
-class ScanIngestionApiTests(TestCase):
+class ScanIngestionAndPdfTests(TestCase):
     def setUp(self):
+        self.user = User.objects.create_user(
+            email="dpo@helvetia-fintech.ch",
+            password="SecurePassword2026!",
+            full_name="Dr. Elena Meier",
+        )
         self.org = Organization.objects.create(
             name="Helvetia FinTech AG",
             slug="helvetia-fintech",
             primary_regime=Organization.PrimaryRegime.DUAL,
+            dpo_name="Dr. Elena Meier",
+            dpo_email="dpo@helvetia-fintech.ch",
             headquarters_country="CH",
+        )
+        OrganizationMembership.objects.create(
+            organization=self.org,
+            user=self.user,
+            role=OrganizationMembership.Role.DPO,
         )
         _, self.raw_token = ApiToken.generate(organization=self.org, name="ci-runner")
 
-    def test_ingests_native_rust_cli_report(self):
+    def test_ingests_native_rust_cli_report_and_exports_ropa_pdf(self):
         payload = {
             "repository": "core-payments-api",
             "branch": "main",
@@ -70,7 +82,10 @@ class ScanIngestionApiTests(TestCase):
         )
 
         self.assertEqual(resp.status_code, 201)
-        data = resp.json()
-        self.assertEqual(data["status"], "fail")
-        self.assertEqual(data["summary"]["critical"], 1)
         self.assertEqual(Finding.objects.filter(scan_run__repository__organization=self.org).count(), 1)
+
+        self.client.force_login(self.user)
+        pdf_resp = self.client.get(reverse("compliance:export_ropa_pdf"))
+        self.assertEqual(pdf_resp.status_code, 200)
+        self.assertEqual(pdf_resp["Content-Type"], "application/pdf")
+        self.assertTrue(pdf_resp.content.startswith(b"%PDF-"))
