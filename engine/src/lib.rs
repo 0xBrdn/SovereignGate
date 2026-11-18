@@ -1,3 +1,5 @@
+pub mod cli;
+pub mod report;
 pub mod rules;
 pub mod scanner;
 
