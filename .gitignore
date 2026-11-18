@@ -1,0 +1,32 @@
+# Rust / Cargo
+/engine/target/
+**/*.rs.bk
+Cargo.lock
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+/platform/.venv/
+/platform/venv/
+/platform/staticfiles/
+/platform/media/
+/platform/db.sqlite3
+*.log
+
+# Node / Tailwind (if compiled locally)
+/platform/node_modules/
+/platform/static/css/output.css
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
