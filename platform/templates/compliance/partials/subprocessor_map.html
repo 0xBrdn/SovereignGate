@@ -1,0 +1,52 @@
+<div id="subprocessors" class="sg-card overflow-hidden">
+  <div class="px-4 py-3 border-b border-zinc-200 bg-white flex items-center justify-between">
+    <div>
+      <h2 class="text-xs font-semibold text-zinc-950">Active Third-Party Sub-Processor Inventory (Art. 28 / Art. 30 GDPR · Art. 12 nDSG)</h2>
+      <p class="text-[11px] text-zinc-500 mt-0.5">Aggregated external data recipients detected across the latest repository scans.</p>
+    </div>
+    <span class="font-mono-code text-[11px] text-zinc-500">{{ subprocessors|length }} ENTITIES</span>
+  </div>
+
+  {% if subprocessors %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="sg-table-header">
+            <th class="py-2.5 px-4">Sub-Processor Entity</th>
+            <th class="py-2.5 px-4">Jurisdiction</th>
+            <th class="py-2.5 px-4">Processing Category</th>
+            <th class="py-2.5 px-4">Applicable Articles</th>
+            <th class="py-2.5 px-4 text-right">Code References</th>
+            <th class="py-2.5 px-4 text-right">Compliance Posture</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-zinc-200 text-xs">
+          {% for sp in subprocessors %}
+            <tr class="hover:bg-zinc-50">
+              <td class="py-2.5 px-4 font-semibold text-zinc-950">{{ sp.provider }}</td>
+              <td class="py-2.5 px-4">
+                {% include "partials/jurisdiction_badge.html" with jurisdiction=sp.jurisdiction %}
+              </td>
+              <td class="py-2.5 px-4 font-mono-code text-[11px] text-zinc-600">{{ sp.category }}</td>
+              <td class="py-2.5 px-4 font-mono-code text-[11px] text-zinc-800">{{ sp.primary_legal_article }}</td>
+              <td class="py-2.5 px-4 text-right font-mono-code tabular-nums text-zinc-900">{{ sp.total_occurrences }}</td>
+              <td class="py-2.5 px-4 text-right">
+                {% if sp.open_occurrences > 0 %}
+                  <span class="inline-flex items-center px-2 py-0.5 text-[11px] font-mono-code bg-amber-50 text-amber-800 border border-amber-200 rounded-sm">
+                    {{ sp.open_occurrences }} UNMITIGATED
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center px-2 py-0.5 text-[11px] font-mono-code bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-sm">
+                    DPA / SAFEGUARDS VERIFIED
+                  </span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="p-6 text-xs text-zinc-500">No external sub-processors recorded yet.</div>
+  {% endif %}
+</div>

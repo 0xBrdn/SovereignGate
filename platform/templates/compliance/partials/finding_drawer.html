@@ -1,0 +1,139 @@
+<div class="h-full flex flex-col bg-white">
+  <!-- Drawer Header -->
+  <div class="px-5 py-4 border-b border-zinc-200 flex items-start justify-between gap-4 bg-zinc-50">
+    <div>
+      <div class="flex items-center gap-2">
+        {% include "partials/severity_badge.html" with severity=finding.severity %}
+        {% include "partials/jurisdiction_badge.html" with jurisdiction=finding.jurisdiction %}
+        <span class="font-mono-code text-xs text-zinc-500">{{ finding.rule_id }}</span>
+      </div>
+      <h2 class="mt-2 text-sm font-semibold text-zinc-950 leading-snug">{{ finding.title }}</h2>
+      <div class="mt-0.5 text-xs text-zinc-600">Sub-Processor: <span class="font-semibold text-zinc-900">{{ finding.provider }}</span></div>
+    </div>
+    <button
+      type="button"
+      @click="drawerOpen = false"
+      class="p-1.5 text-zinc-500 hover:text-zinc-950 border border-zinc-200 bg-white rounded-sm"
+      title="Close inspector"
+    >
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="square" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Drawer Scroll Body -->
+  <div class="flex-1 overflow-y-auto p-5 space-y-5 text-xs">
+    {% if saved_banner %}
+      <div class="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-sm font-mono-code text-[11px]">
+        DPO triage decision saved and persisted across future CI scan runs.
+      </div>
+    {% endif %}
+
+    <!-- Source Evidence Block -->
+    <div>
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="text-[11px] font-mono-code font-semibold uppercase tracking-wider text-zinc-500">
+          Source Location &amp; Matched Evidence
+        </span>
+        <span class="font-mono-code text-[11px] text-zinc-500">
+          {{ finding.scan_run.repository.name }} · {{ finding.scan_run.branch }}
+        </span>
+      </div>
+      <div class="bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-sm overflow-hidden">
+        <div class="px-3 py-1.5 bg-zinc-900 border-b border-zinc-800 font-mono-code text-[11px] text-zinc-300 flex items-center justify-between">
+          <span>{{ finding.file_path }}:{{ finding.line_number }}</span>
+          <span class="text-zinc-500">{{ finding.target_type }}</span>
+        </div>
+        <pre class="p-3 font-mono-code text-[11px] text-emerald-300 overflow-x-auto leading-relaxed"><code>{{ finding.line_number }} | {{ finding.snippet|default:"(manifest dependency entry)" }}</code></pre>
+      </div>
+    </div>
+
+    <!-- Legal Analysis -->
+    <div>
+      <div class="text-[11px] font-mono-code font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">
+        Applicable Regulatory Provisions
+      </div>
+      <div class="space-y-2">
+        {% for ref in finding.legal_references %}
+          <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-sm">
+            <div class="font-mono-code text-[11px] font-semibold text-zinc-950">
+              {{ ref.framework }} — {{ ref.article }}
+            </div>
+            <p class="mt-1 text-zinc-600 leading-relaxed">{{ ref.summary }}</p>
+          </div>
+        {% empty %}
+          <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-sm font-mono-code text-[11px]">
+            {{ finding.primary_legal_article }}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Engineering Remediation -->
+    {% if finding.remediation %}
+      <div>
+        <div class="text-[11px] font-mono-code font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">
+          Technical &amp; Contractual Remediation
+        </div>
+        <div class="p-3 bg-white border border-zinc-300 rounded-sm text-zinc-800 leading-relaxed">
+          {{ finding.remediation }}
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- DPO Governance Triage Form -->
+    <form
+      hx-post="{% url 'compliance:finding_resolve' finding.id %}"
+      hx-target="#drawer-panel"
+      hx-swap="innerHTML"
+      class="pt-3 border-t border-zinc-200 space-y-3"
+    >
+      {% csrf_token %}
+      <div class="text-[11px] font-mono-code font-semibold uppercase tracking-wider text-zinc-950">
+        DPO Compliance Sign-Off
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-mono-code text-zinc-600 mb-1">Resolution Status</label>
+        <select
+          name="resolution_status"
+          class="w-full px-2.5 py-2 text-xs bg-white border border-zinc-300 rounded-sm font-mono-code focus:outline-none focus:border-zinc-950"
+        >
+          {% for value, label in resolution_choices %}
+            <option value="{{ value }}" {% if finding.resolution_status == value %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-mono-code text-zinc-600 mb-1">
+          Audit Justification / DPA Reference ID
+        </label>
+        <textarea
+          name="review_note"
+          rows="3"
+          placeholder="e.g., DPA executed 2026-03-14; EU-US DPF certification verified; EU endpoint pinned."
+          class="w-full px-2.5 py-2 text-xs bg-white border border-zinc-300 rounded-sm focus:outline-none focus:border-zinc-950"
+        >{{ finding.review_note }}</textarea>
+      </div>
+
+      {% if finding.reviewed_by %}
+        <div class="text-[11px] font-mono-code text-zinc-500">
+          Last reviewed by: {{ finding.reviewed_by.email }}
+        </div>
+      {% endif %}
+
+      <div class="flex items-center justify-end gap-2 pt-1">
+        <button
+          type="submit"
+          class="px-4 py-2 bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-semibold uppercase tracking-wider rounded-sm transition-colors"
+        >
+          Save Audit Decision
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
