@@ -1,0 +1,86 @@
+:root {
+  --sg-bg-canvas: #FAFAFA;
+  --sg-bg-surface: #FFFFFF;
+  --sg-bg-subtle: #F4F4F5;
+  --sg-bg-rail: #09090B;
+  --sg-bg-rail-elevated: #18181B;
+
+  --sg-border: #E4E4E7;
+  --sg-border-strong: #D4D4D8;
+  --sg-border-rail: #27272A;
+
+  --sg-text-primary: #09090B;
+  --sg-text-secondary: #52525B;
+  --sg-text-muted: #71717A;
+
+  --sg-font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sg-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--sg-bg-canvas);
+  color: var(--sg-text-primary);
+  font-family: var(--sg-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+.font-mono-code {
+  font-family: var(--sg-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Crisp Swiss 1px structural rules */
+.sg-card {
+  background-color: var(--sg-bg-surface);
+  border: 1px solid var(--sg-border);
+  border-radius: 4px;
+}
+
+.sg-table-header {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sg-text-muted);
+  border-bottom: 1px solid var(--sg-border);
+  background-color: var(--sg-bg-subtle);
+}
+
+/* HTMX progress bar at top viewport edge */
+.htmx-indicator {
+  opacity: 0;
+  transition: opacity 120ms ease-in;
+}
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  opacity: 1;
+}
+
+/* Custom hairline scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D4D4D8;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #A1A1AA;
+}

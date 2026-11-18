@@ -1,0 +1,21 @@
+{% if severity == "critical" %}
+  <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-mono-code font-semibold uppercase tracking-wider bg-red-50 text-red-700 border border-red-200 rounded-sm">
+    <span class="w-1.5 h-1.5 rounded-full bg-red-600"></span>
+    CRITICAL
+  </span>
+{% elif severity == "high" %}
+  <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-mono-code font-semibold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200 rounded-sm">
+    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+    HIGH
+  </span>
+{% elif severity == "medium" %}
+  <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-mono-code font-semibold uppercase tracking-wider bg-zinc-100 text-zinc-800 border border-zinc-300 rounded-sm">
+    <span class="w-1.5 h-1.5 rounded-full bg-zinc-500"></span>
+    MEDIUM
+  </span>
+{% else %}
+  <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-mono-code font-semibold uppercase tracking-wider bg-zinc-50 text-zinc-500 border border-zinc-200 rounded-sm">
+    <span class="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
+    LOW
+  </span>
+{% endif %}

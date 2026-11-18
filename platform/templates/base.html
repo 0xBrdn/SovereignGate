@@ -1,0 +1,228 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}{{ page_title|default:"Audit Console" }} — SovereignGate{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.3" defer></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="{% static 'css/design-system.css' %}" />
+</head>
+<body class="min-h-screen bg-[#FAFAFA] text-[#09090B]" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <!-- Global HTMX Top Progress Hairline -->
+  <div id="global-htmx-bar" class="htmx-indicator fixed top-0 left-0 right-0 h-[2px] bg-zinc-950 z-50"></div>
+
+  <div class="min-h-screen flex">
+    <!-- Left Swiss Rail Navigation -->
+    <aside class="w-64 shrink-0 bg-[#09090B] text-zinc-200 border-r border-[#27272A] flex flex-col justify-between select-none">
+      <div>
+        <!-- Brand Header -->
+        <div class="h-14 px-4 border-b border-[#27272A] flex items-center justify-between">
+          <a href="{% url 'compliance:dashboard' %}" class="flex items-center gap-2.5">
+            <span class="w-6 h-6 bg-white text-zinc-950 rounded-sm flex items-center justify-center font-mono-code text-xs font-bold tracking-tighter">
+              SG
+            </span>
+            <span class="text-sm font-semibold tracking-tight text-white">SovereignGate</span>
+          </a>
+          <span class="px-1.5 py-0.5 text-[10px] font-mono-code uppercase bg-zinc-900 text-zinc-400 border border-zinc-800 rounded-sm">
+            v0.1
+          </span>
+        </div>
+
+        <!-- Organization Switcher -->
+        <div class="p-3 border-b border-[#27272A]" x-data="{ open: false }">
+          <div class="text-[10px] font-mono-code uppercase tracking-wider text-zinc-500 px-1.5 mb-1">
+            Data Controller / Tenant
+          </div>
+          {% if active_org %}
+            <div class="relative">
+              <button
+                type="button"
+                @click="open = !open"
+                @click.outside="open = false"
+                class="w-full px-2.5 py-2 bg-[#18181B] hover:bg-zinc-800 border border-zinc-800 rounded-sm flex items-center justify-between text-left transition-colors"
+              >
+                <div class="min-w-0">
+                  <div class="text-xs font-medium text-white truncate">{{ active_org.name }}</div>
+                  <div class="text-[10px] font-mono-code text-zinc-400 mt-0.5">
+                    {{ active_org.primary_regime }} · {{ active_org.headquarters_country }}
+                  </div>
+                </div>
+                <svg class="w-3.5 h-3.5 text-zinc-400 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="square" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                </svg>
+              </button>
+
+              {% if organizations|length > 1 %}
+                <div
+                  x-show="open"
+                  x-cloak
+                  class="absolute left-0 right-0 mt-1 bg-[#18181B] border border-zinc-700 rounded-sm shadow-lg z-30 py-1"
+                >
+                  {% for org in organizations %}
+                    <form method="post" action="{% url 'accounts:switch_org' %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="org_slug" value="{{ org.slug }}" />
+                      <button
+                        type="submit"
+                        class="w-full px-2.5 py-1.5 text-left text-xs flex items-center justify-between hover:bg-zinc-800 {% if org.id == active_org.id %}text-white font-semibold{% else %}text-zinc-400{% endif %}"
+                      >
+                        <span class="truncate">{{ org.name }}</span>
+                        <span class="font-mono-code text-[10px] text-zinc-500">{{ org.primary_regime }}</span>
+                      </button>
+                    </form>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          {% else %}
+            <div class="px-2.5 py-2 bg-[#18181B] border border-zinc-800 rounded-sm text-xs text-zinc-400">
+              No organization assigned
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Primary Navigation -->
+        <nav class="p-3 space-y-1">
+          <div class="text-[10px] font-mono-code uppercase tracking-wider text-zinc-500 px-2 py-1">
+            Compliance Telemetry
+          </div>
+
+          <a
+            href="{% url 'compliance:dashboard' %}"
+            class="flex items-center justify-between px-2.5 py-2 rounded-sm text-xs font-medium transition-colors {% if active_nav == 'audit' %}bg-zinc-800/90 text-white border border-zinc-700{% else %}text-zinc-400 hover:text-white hover:bg-zinc-900{% endif %}"
+          >
+            <span>Cross-Border Audit</span>
+            <span class="font-mono-code text-[10px] text-zinc-500">Art. 44</span>
+          </a>
+
+          <a
+            href="{% url 'compliance:dashboard' %}#subprocessors"
+            class="flex items-center justify-between px-2.5 py-2 rounded-sm text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
+          >
+            <span>Sub-Processor Map</span>
+            <span class="font-mono-code text-[10px] text-zinc-500">Art. 28</span>
+          </a>
+
+          <a
+            href="{% url 'compliance:dashboard' %}#scans"
+            class="flex items-center justify-between px-2.5 py-2 rounded-sm text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
+          >
+            <span>CI/CD Scan Runs</span>
+            <span class="font-mono-code text-[10px] text-zinc-500">SARIF</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Footer User & Legal Regime -->
+      <div class="p-3 border-t border-[#27272A] space-y-2.5">
+        <div class="px-2 py-1.5 bg-zinc-900/80 border border-zinc-800 rounded-sm">
+          <div class="flex items-center justify-between text-[10px] font-mono-code text-zinc-400">
+            <span>REGULATORY ENGINE</span>
+            <span class="text-emerald-400">ACTIVE</span>
+          </div>
+          <div class="text-[11px] font-mono-code text-zinc-300 mt-0.5">
+            GDPR (EU) · nDSG (CH)
+          </div>
+        </div>
+
+        {% if request.user.is_authenticated %}
+          <div class="flex items-center justify-between px-1.5 pt-1">
+            <div class="min-w-0">
+              <div class="text-xs font-medium text-zinc-200 truncate">
+                {{ request.user.full_name|default:request.user.email }}
+              </div>
+              <div class="text-[10px] font-mono-code text-zinc-500 truncate">{{ request.user.email }}</div>
+            </div>
+            <form method="post" action="{% url 'accounts:logout' %}">
+              {% csrf_token %}
+              <button
+                type="submit"
+                title="Sign out"
+                class="px-2 py-1 text-[10px] font-mono-code uppercase text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-600 rounded-sm transition-colors"
+              >
+                Exit
+              </button>
+            </form>
+          </div>
+        {% endif %}
+      </div>
+    </aside>
+
+    <!-- Main Content Viewport -->
+    <div class="flex-1 flex flex-col min-w-0">
+      <!-- Top Context Header -->
+      <header class="h-14 bg-white border-b border-zinc-200 px-6 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <h1 class="text-sm font-semibold tracking-tight text-zinc-950">
+            {% block header_title %}{{ page_title|default:"Cross-Border Data Flow Audit" }}{% endblock %}
+          </h1>
+          {% if active_org %}
+            <span class="text-zinc-300">/</span>
+            <span class="font-mono-code text-xs text-zinc-500">{{ active_org.slug }}</span>
+          {% endif %}
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          {% block header_actions %}{% endblock %}
+        </div>
+      </header>
+
+      <!-- Workspace Canvas -->
+      <main class="flex-1 p-6 max-w-[1440px] w-full mx-auto">
+        {% if no_org_assigned %}
+          {% include "partials/empty_state.html" with title="No Tenant Organization Linked" description="Ask your administrator to assign your user account to an Organization in Django Admin before inspecting scan runs." %}
+        {% else %}
+          {% block content %}
+            <!-- Default KPI Summary Strip -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div class="sg-card p-4">
+                <div class="text-[11px] font-mono-code uppercase tracking-wider text-zinc-500">Critical Violations</div>
+                <div class="mt-2 flex items-baseline justify-between">
+                  <span class="text-2xl font-semibold tabular-nums {% if critical_total > 0 %}text-red-600{% else %}text-zinc-950{% endif %}">
+                    {{ critical_total|default:0 }}
+                  </span>
+                  <span class="text-[11px] font-mono-code text-zinc-400">Art. 44 / Art. 16</span>
+                </div>
+              </div>
+
+              <div class="sg-card p-4">
+                <div class="text-[11px] font-mono-code uppercase tracking-wider text-zinc-500">High Risk Flows</div>
+                <div class="mt-2 flex items-baseline justify-between">
+                  <span class="text-2xl font-semibold tabular-nums text-zinc-950">{{ high_total|default:0 }}</span>
+                  <span class="text-[11px] font-mono-code text-zinc-400">DPA / TIA REQ</span>
+                </div>
+              </div>
+
+              <div class="sg-card p-4">
+                <div class="text-[11px] font-mono-code uppercase tracking-wider text-zinc-500">US Sub-Processors</div>
+                <div class="mt-2 flex items-baseline justify-between">
+                  <span class="text-2xl font-semibold tabular-nums text-zinc-950">{{ us_transfers_total|default:0 }}</span>
+                  <span class="text-[11px] font-mono-code text-zinc-400">DPF / SCC</span>
+                </div>
+              </div>
+
+              <div class="sg-card p-4">
+                <div class="text-[11px] font-mono-code uppercase tracking-wider text-zinc-500">Audited Repositories</div>
+                <div class="mt-2 flex items-baseline justify-between">
+                  <span class="text-2xl font-semibold tabular-nums text-zinc-950">{{ repo_count|default:0 }}</span>
+                  <span class="text-[11px] font-mono-code text-zinc-400">ACTIVE</span>
+                </div>
+              </div>
+            </div>
+
+            {% if not findings %}
+              {% include "partials/empty_state.html" %}
+            {% endif %}
+          {% endblock %}
+        {% endif %}
+      </main>
+    </div>
+  </div>
+</body>
+</html>
