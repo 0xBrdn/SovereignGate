@@ -1,0 +1,66 @@
+name: "SovereignGate GDPR & Swiss nDSG Audit"
+description: "Scans codebases, dependencies, and IaC for unauthorized cross-border data flows and non-EU/CH sub-processors."
+author: "SovereignGate"
+
+branding:
+  icon: "shield"
+  color: "gray-dark"
+
+inputs:
+  path:
+    description: "Target directory or file path to audit relative to workspace root"
+    required: false
+    default: "."
+  fail_on:
+    description: "Fail the CI check when findings at or above this severity exist (none, low, medium, high, critical)"
+    required: false
+    default: "high"
+  rules_dir:
+    description: "Optional path to custom YAML compliance rules directory"
+    required: false
+    default: ""
+  sarif_output:
+    description: "Output file path for SARIF v2.1.0 report"
+    required: false
+    default: "sovereigngate-results.sarif"
+  json_output:
+    description: "Output file path for native JSON report"
+    required: false
+    default: "sovereigngate-results.json"
+  platform_url:
+    description: "Optional SovereignGate SaaS URL (e.g., https://audit.sovereigngate.ch) for telemetry ingestion"
+    required: false
+    default: ""
+  api_token:
+    description: "Optional SovereignGate API bearer token (sg_live_...) for SaaS ingestion"
+    required: false
+    default: ""
+  comment_pr:
+    description: "Post or update a concise compliance summary comment on Pull Requests (true/false)"
+    required: false
+    default: "true"
+
+outputs:
+  sarif_file:
+    description: "Path to generated SARIF v2.1.0 file"
+  json_file:
+    description: "Path to generated JSON report file"
+  total_findings:
+    description: "Total cross-border findings detected"
+  critical_count:
+    description: "Number of CRITICAL findings"
+  high_count:
+    description: "Number of HIGH findings"
+
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  env:
+    INPUT_PATH: ${{ inputs.path }}
+    INPUT_FAIL_ON: ${{ inputs.fail_on }}
+    INPUT_RULES_DIR: ${{ inputs.rules_dir }}
+    INPUT_SARIF_OUTPUT: ${{ inputs.sarif_output }}
+    INPUT_JSON_OUTPUT: ${{ inputs.json_output }}
+    INPUT_PLATFORM_URL: ${{ inputs.platform_url }}
+    INPUT_API_TOKEN: ${{ inputs.api_token }}
+    INPUT_COMMENT_PR: ${{ inputs.comment_pr }}

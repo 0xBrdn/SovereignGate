@@ -1,0 +1,59 @@
+stages:
+  - compliance
+
+variables:
+  SOVEREIGNGATE_FAIL_ON: "high"
+  SOVEREIGNGATE_SCAN_PATH: "."
+
+sovereigngate_gdpr_ndsg_audit:
+  stage: compliance
+  image:
+    name: rust:1.83-alpine3.20
+  before_script:
+    - apk add --no-cache musl-dev curl jq
+    - cargo build --release --manifest-path engine/Cargo.toml
+    - install -m 0755 engine/target/release/sovereigngate /usr/local/bin/sovereigngate
+  script:
+    - |
+      set +e
+      sovereigngate scan "$SOVEREIGNGATE_SCAN_PATH" \
+        --format json \
+        --output gl-sovereigngate-report.json \
+        --fail-on "$SOVEREIGNGATE_FAIL_ON"
+      SCAN_EXIT=$?
+      set -e
+
+      sovereigngate scan "$SOVEREIGNGATE_SCAN_PATH" \
+        --format sarif \
+        --output gl-sovereigngate-report.sarif \
+        --fail-on none
+
+      sovereigngate scan "$SOVEREIGNGATE_SCAN_PATH" \
+        --format cli \
+        --fail-on none
+
+      if [ -n "${SOVEREIGNGATE_PLATFORM_URL:-}" ] && [ -n "${SOVEREIGNGATE_API_TOKEN:-}" ]; then
+        ENVELOPE=$(jq -n \
+          --arg repo "$CI_PROJECT_PATH" \
+          --arg branch "${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_REF_NAME}" \
+          --arg sha "$CI_COMMIT_SHA" \
+          --arg vcs "$CI_PROJECT_URL" \
+          --slurpfile report gl-sovereigngate-report.json \
+          '{repository: $repo, branch: $branch, commit_sha: $sha, vcs_url: $vcs, report: $report[0]}')
+
+        curl -fsSL -X POST "${SOVEREIGNGATE_PLATFORM_URL%/}/api/v1/scans/ingest/" \
+          -H "Authorization: Bearer ${SOVEREIGNGATE_API_TOKEN}" \
+          -H "Content-Type: application/json" \
+          -d "$ENVELOPE" > /dev/null
+      fi
+
+      exit $SCAN_EXIT
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - gl-sovereigngate-report.json
+      - gl-sovereigngate-report.sarif
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
