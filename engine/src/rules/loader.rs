@@ -74,7 +74,9 @@ pub fn load_rules_from_dir(dir: &Path) -> Result<Vec<CompiledRule>, RuleLoadErro
         .filter(|p| {
             p.extension()
                 .and_then(|ext| ext.to_str())
-                .is_some_and(|ext| ext.eq_ignore_ascii_case("yaml") || ext.eq_ignore_ascii_case("yml"))
+                .is_some_and(|ext| {
+                    ext.eq_ignore_ascii_case("yaml") || ext.eq_ignore_ascii_case("yml")
+                })
         })
         .collect();
 

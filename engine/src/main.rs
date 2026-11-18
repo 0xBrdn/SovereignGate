@@ -54,9 +54,8 @@ fn execute_scan(args: ScanArgs) -> Result<ExitCode> {
                 format!("failed to create output directory '{}'", parent.display())
             })?;
         }
-        fs::write(output_path, &rendered).with_context(|| {
-            format!("failed to write report to '{}'", output_path.display())
-        })?;
+        fs::write(output_path, &rendered)
+            .with_context(|| format!("failed to write report to '{}'", output_path.display()))?;
     } else {
         print!("{rendered}");
         if !rendered.ends_with('\n') {
@@ -85,15 +84,13 @@ fn execute_rules(args: RulesArgs) -> Result<ExitCode> {
     }
 
     let mut table = Table::new();
-    table
-        .load_preset(UTF8_FULL_CONDENSED)
-        .set_header(vec![
-            Cell::new("ID").add_attribute(Attribute::Bold),
-            Cell::new("SEVERITY").add_attribute(Attribute::Bold),
-            Cell::new("JURISDICTION").add_attribute(Attribute::Bold),
-            Cell::new("PROVIDER").add_attribute(Attribute::Bold),
-            Cell::new("TITLE").add_attribute(Attribute::Bold),
-        ]);
+    table.load_preset(UTF8_FULL_CONDENSED).set_header(vec![
+        Cell::new("ID").add_attribute(Attribute::Bold),
+        Cell::new("SEVERITY").add_attribute(Attribute::Bold),
+        Cell::new("JURISDICTION").add_attribute(Attribute::Bold),
+        Cell::new("PROVIDER").add_attribute(Attribute::Bold),
+        Cell::new("TITLE").add_attribute(Attribute::Bold),
+    ]);
 
     for c in &compiled {
         let r = &c.rule;

@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
 from .models import ApiToken, Organization, OrganizationMembership, User
@@ -46,3 +46,23 @@ class ApiTokenAdmin(admin.ModelAdmin):
     list_display = ["name", "organization", "prefix", "last_used_at", "revoked_at", "created_at"]
     list_filter = ["organization", "revoked_at"]
     readonly_fields = ["prefix", "token_hash", "last_used_at", "created_at"]
+
+    def get_fields(self, request, obj=None):
+        if obj is None:
+            return ["organization", "name"]
+        return ["organization", "name", "prefix", "token_hash", "created_by", "last_used_at", "revoked_at", "created_at"]
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            generated, raw_secret = ApiToken.generate(
+                organization=obj.organization,
+                name=obj.name,
+                created_by=request.user,
+            )
+            obj.pk = generated.pk
+            messages.warning(
+                request,
+                f"Copy your API token now — it will never be shown again: {raw_secret}",
+            )
+        else:
+            super().save_model(request, obj, form, change)

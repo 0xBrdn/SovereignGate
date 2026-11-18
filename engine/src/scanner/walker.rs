@@ -111,7 +111,12 @@ fn is_lockfile_or_minified(path: &Path) -> bool {
     let lower = name.to_ascii_lowercase();
     matches!(
         lower.as_str(),
-        "package-lock.json" | "yarn.lock" | "pnpm-lock.yaml" | "cargo.lock" | "poetry.lock" | "go.sum"
+        "package-lock.json"
+            | "yarn.lock"
+            | "pnpm-lock.yaml"
+            | "cargo.lock"
+            | "poetry.lock"
+            | "go.sum"
     ) || lower.ends_with(".min.js")
         || lower.ends_with(".min.css")
 }

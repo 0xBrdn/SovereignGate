@@ -1,6 +1,8 @@
 use crate::rules::schema::Severity;
 use crate::scanner::ScanReport;
-use comfy_table::{presets::UTF8_FULL_CONDENSED, Attribute, Cell, Color, ContentArrangement, Table};
+use comfy_table::{
+    presets::UTF8_FULL_CONDENSED, Attribute, Cell, Color, ContentArrangement, Table,
+};
 use std::fmt::Write;
 
 pub fn render_cli_table(report: &ScanReport) -> String {

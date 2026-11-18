@@ -80,7 +80,10 @@ pub fn scan_iac(
 
             if matched_indicator.is_none() {
                 for domain in &compiled.rule.matchers.domains {
-                    if raw_line.to_ascii_lowercase().contains(&domain.to_ascii_lowercase()) {
+                    if raw_line
+                        .to_ascii_lowercase()
+                        .contains(&domain.to_ascii_lowercase())
+                    {
                         matched_indicator = Some(domain.clone());
                         break;
                     }

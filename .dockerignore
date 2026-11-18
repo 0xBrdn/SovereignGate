@@ -1,0 +1,17 @@
+.git
+.gitignore
+.github
+.gitlab-ci.yml
+.env
+.env.*
+!.env.prod.example
+
+engine/target
+platform/.venv
+platform/venv
+platform/__pycache__
+platform/**/__pycache__
+platform/db.sqlite3
+platform/staticfiles
+*.log
+.DS_Store

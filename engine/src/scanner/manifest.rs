@@ -1,4 +1,6 @@
-use crate::rules::schema::{CompiledRule, Jurisdiction, LegalReference, ProviderCategory, ScanTarget, Severity};
+use crate::rules::schema::{
+    CompiledRule, Jurisdiction, LegalReference, ProviderCategory, ScanTarget, Severity,
+};
 use crate::scanner::Finding;
 use std::collections::HashSet;
 use std::path::Path;
@@ -334,8 +336,7 @@ fn parse_go_mod(content: &str) -> Vec<ExtractedDependency> {
             // Match both full module path and final package segment (e.g. github.com/stripe/stripe-go/v79 -> stripe-go)
             let short_name = mod_path
                 .split('/')
-                .filter(|seg| !seg.starts_with('v') || seg.len() > 4)
-                .last()
+                .rfind(|seg| !seg.starts_with('v') || seg.len() > 4)
                 .unwrap_or(mod_path);
 
             deps.push(ExtractedDependency {
@@ -350,12 +351,4 @@ fn parse_go_mod(content: &str) -> Vec<ExtractedDependency> {
 }
 
 #[allow(dead_code)]
-fn _keep_imports_used(
-    _: (
-        Jurisdiction,
-        LegalReference,
-        ProviderCategory,
-        Severity,
-    ),
-) {
-}
+fn _keep_imports_used(_: (Jurisdiction, LegalReference, ProviderCategory, Severity)) {}
