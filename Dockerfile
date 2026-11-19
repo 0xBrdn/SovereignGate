@@ -1,5 +1,5 @@
 # Stage 1: Build static Rust CLI engine
-FROM rust:1.83-slim-bookworm AS rust-builder
+FROM rust:1.88-slim-bookworm AS rust-builder
 
 WORKDIR /build/engine
 COPY engine/Cargo.toml engine/Cargo.lock ./
@@ -19,9 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /wheels
+WORKDIR /build
 COPY platform/requirements.txt ./requirements.txt
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /wheels -r requirements.txt
+RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
 
 # Stage 3: Minimal hardened production runtime (Django + WeasyPrint + Rust binary)
 FROM python:3.12-slim-bookworm AS runtime
@@ -51,8 +51,7 @@ COPY --from=rust-builder /build/engine/target/release/sovereigngate /usr/local/b
 RUN chmod 0755 /usr/local/bin/sovereigngate
 
 COPY --from=python-builder /wheels /wheels
-RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
-
+RUN pip install --no-cache-dir --no-index --find-links=/wheels /wheels/*.whl && rm -rf /wheels
 WORKDIR /app/platform
 COPY --chown=sovereigngate:sovereigngate platform/ /app/platform/
 
