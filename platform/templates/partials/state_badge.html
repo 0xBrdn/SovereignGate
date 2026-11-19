@@ -1,0 +1,1 @@
+<span class="state" data-state="{{ state }}">{% if state == "open" %}Open{% elif state == "dpa_verified" %}DPA verified{% elif state == "accepted_risk" %}Risk accepted{% elif state == "false_positive" %}False positive{% elif state == "pass" %}Compliant{% elif state == "warn" %}Warnings{% elif state == "fail" %}Non-compliant{% else %}{{ state }}{% endif %}</span>

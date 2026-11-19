@@ -1,44 +1,31 @@
-<div id="subprocessors" class="sg-card overflow-hidden">
-  <div class="px-4 py-3 border-b border-zinc-200 bg-white flex items-center justify-between">
-    <div>
-      <h2 class="text-xs font-semibold text-zinc-950">Active Third-Party Sub-Processor Inventory (Art. 28 / Art. 30 GDPR · Art. 12 nDSG)</h2>
-      <p class="text-[11px] text-zinc-500 mt-0.5">Aggregated external data recipients detected across the latest repository scans.</p>
-    </div>
-    <span class="font-mono-code text-[11px] text-zinc-500">{{ subprocessors|length }} ENTITIES</span>
+<section id="subprocessors" class="section" aria-labelledby="sp-title">
+  <div class="section-head">
+    <h2 id="sp-title">Sub-processors <span class="count tnum">{{ subprocessors|length }}</span></h2>
+    <p>External recipients grouped by entity — the working basis for Art. 28 and Art. 30 GDPR and Art. 12 nDSG records.</p>
   </div>
-
   {% if subprocessors %}
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse">
+    <div class="table-wrap">
+      <table class="register register--ruled">
+        <caption class="sr-only">Sub-processors detected in the latest scans</caption>
         <thead>
-          <tr class="sg-table-header">
-            <th class="py-2.5 px-4">Sub-Processor Entity</th>
-            <th class="py-2.5 px-4">Jurisdiction</th>
-            <th class="py-2.5 px-4">Processing Category</th>
-            <th class="py-2.5 px-4">Applicable Articles</th>
-            <th class="py-2.5 px-4 text-right">Code References</th>
-            <th class="py-2.5 px-4 text-right">Compliance Posture</th>
+          <tr>
+            <th scope="col">Entity</th><th scope="col">Jurisdiction</th><th scope="col">Category</th>
+            <th scope="col">Articles</th><th scope="col" class="num">References</th><th scope="col">Posture</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-zinc-200 text-xs">
+        <tbody>
           {% for sp in subprocessors %}
-            <tr class="hover:bg-zinc-50">
-              <td class="py-2.5 px-4 font-semibold text-zinc-950">{{ sp.provider }}</td>
-              <td class="py-2.5 px-4">
-                {% include "partials/jurisdiction_badge.html" with jurisdiction=sp.jurisdiction %}
-              </td>
-              <td class="py-2.5 px-4 font-mono-code text-[11px] text-zinc-600">{{ sp.category }}</td>
-              <td class="py-2.5 px-4 font-mono-code text-[11px] text-zinc-800">{{ sp.primary_legal_article }}</td>
-              <td class="py-2.5 px-4 text-right font-mono-code tabular-nums text-zinc-900">{{ sp.total_occurrences }}</td>
-              <td class="py-2.5 px-4 text-right">
-                {% if sp.open_occurrences > 0 %}
-                  <span class="inline-flex items-center px-2 py-0.5 text-[11px] font-mono-code bg-amber-50 text-amber-800 border border-amber-200 rounded-sm">
-                    {{ sp.open_occurrences }} UNMITIGATED
-                  </span>
+            <tr>
+              <td class="cell-title">{{ sp.provider }}</td>
+              <td>{% include "partials/jurisdiction_badge.html" with jurisdiction=sp.jurisdiction %}</td>
+              <td class="mono">{{ sp.category }}</td>
+              <td><span class="article">{{ sp.primary_legal_article }}</span></td>
+              <td class="num">{{ sp.total_occurrences }}</td>
+              <td>
+                {% if sp.open_occurrences %}
+                  <span class="state" data-state="open">{{ sp.open_occurrences }} unmitigated</span>
                 {% else %}
-                  <span class="inline-flex items-center px-2 py-0.5 text-[11px] font-mono-code bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-sm">
-                    DPA / SAFEGUARDS VERIFIED
-                  </span>
+                  <span class="state" data-state="dpa_verified">Safeguards on record</span>
                 {% endif %}
               </td>
             </tr>
@@ -47,6 +34,6 @@
       </table>
     </div>
   {% else %}
-    <div class="p-6 text-xs text-zinc-500">No external sub-processors recorded yet.</div>
+    <div class="empty"><h3>No external recipient recorded</h3><p>Nothing in the latest scans sends personal data to a third party.</p></div>
   {% endif %}
-</div>
+</section>

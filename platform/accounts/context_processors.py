@@ -1,25 +1,13 @@
-from accounts.models import Organization
+from accounts.tenancy import get_active_membership, get_memberships
 
 
 def tenant_context(request):
-    """Provides the active organization and membership list across all workspace templates."""
-    if not request.user.is_authenticated:
-        return {"organizations": [], "active_org": None}
-
-    organizations = list(
-        Organization.objects.filter(memberships__user=request.user).distinct().order_by("name")
-    )
-    active_org = None
-
-    selected_slug = request.session.get("active_org_slug")
-    if selected_slug:
-        active_org = next((org for org in organizations if org.slug == selected_slug), None)
-
-    if active_org is None and organizations:
-        active_org = organizations[0]
-        request.session["active_org_slug"] = active_org.slug
-
+    """Active organisation, the user's role in it, and the tenant switcher list."""
+    memberships = get_memberships(request)
+    active = get_active_membership(request) if memberships else None
     return {
-        "organizations": organizations,
-        "active_org": active_org,
+        "organizations": [m.organization for m in memberships],
+        "active_org": active.organization if active else None,
+        "active_membership": active,
+        "can_triage": bool(active and active.can_triage),
     }

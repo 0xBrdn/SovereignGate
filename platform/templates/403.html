@@ -1,0 +1,24 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Access denied — SovereignGate</title>
+  <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components.css' %}">
+  <link rel="stylesheet" href="{% static 'css/pages.css' %}">
+</head>
+<body>
+  <main class="errorpage">
+    <div class="errorpage__box">
+      <div class="errorpage__code">403</div>
+      <h1>Access denied</h1>
+      <p>{{ reason|default:"You do not have permission to view this page." }}</p>
+      <a class="btn" href="/">Back to the console</a>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,160 @@
+/* ==========================================================================
+   Components
+   ========================================================================== */
+
+/* ---- Eyebrow / labels -------------------------------------------------- */
+.eyebrow {
+  font-size: var(--fs-2xs);
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.mono { font-family: var(--font-mono); font-size: 0.92em; }
+.tnum { font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink-3); }
+
+/* ---- Buttons ----------------------------------------------------------- */
+.btn {
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--btn-bg);
+  background: var(--btn-bg); color: var(--btn-fg);
+  font-size: var(--fs-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  text-decoration: none; border-radius: var(--radius);
+  transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
+}
+.btn:hover { background: transparent; color: var(--ink); }
+.btn:active { transform: translateY(1px); }
+.btn--quiet { background: transparent; color: var(--ink); border-color: var(--rule-strong); }
+.btn--quiet:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.btn--block { width: 100%; justify-content: center; padding-block: 0.7rem; }
+.btn[disabled], .btn[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
+.btn svg { width: 0.95rem; height: 0.95rem; flex: none; }
+
+/* ---- Badges ------------------------------------------------------------ */
+.sev, .state, .juris {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.12rem 0.5rem;
+  font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
+  border: 1px solid currentColor; border-radius: var(--radius);
+  white-space: nowrap; line-height: 1.5;
+}
+.sev::before { content: ""; width: 0.5rem; height: 0.5rem; background: currentColor; flex: none; }
+.sev[data-level="critical"] { color: var(--crit); background: var(--crit-tint); }
+.sev[data-level="high"]     { color: var(--high); background: var(--high-tint); }
+.sev[data-level="high"]::before { clip-path: polygon(0 100%, 100% 100%, 100% 0); }
+.sev[data-level="medium"]   { color: var(--med);  background: var(--med-tint); }
+.sev[data-level="medium"]::before { border-radius: 50%; }
+.sev[data-level="low"]      { color: var(--low);  background: var(--low-tint); }
+.sev[data-level="low"]::before { height: 0.14rem; align-self: center; }
+
+.state[data-state="open"]           { color: var(--crit); }
+.state[data-state="dpa_verified"]   { color: var(--ok); }
+.state[data-state="accepted_risk"]  { color: var(--high); }
+.state[data-state="false_positive"] { color: var(--low); }
+.state[data-state="pass"]  { color: var(--ok); }
+.state[data-state="warn"]  { color: var(--high); }
+.state[data-state="fail"]  { color: var(--crit); }
+
+.juris { border-color: var(--rule-strong); color: var(--ink-2); font-weight: 500; }
+.juris[data-juris="US"], .juris[data-juris="NON_ADEQUATE"] { color: var(--ink); border-color: var(--ink); }
+.juris[data-juris="CN"] { color: var(--crit); border-color: var(--crit); }
+.juris[data-juris="CH"], .juris[data-juris="EU_EEA"] { color: var(--ok); border-color: var(--ok); }
+
+/* ---- Register tables --------------------------------------------------- */
+.table-wrap { overflow-x: auto; }
+.register { font-size: var(--fs-sm); }
+.register caption { text-align: left; }
+.register th {
+  padding: var(--s-2) var(--s-4);
+  text-align: left; white-space: nowrap;
+  font-size: var(--fs-2xs); font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--ink);
+}
+.register td { padding: var(--s-3) var(--s-4); vertical-align: top; border-bottom: 1px solid var(--rule); }
+.register .num { text-align: right; font-variant-numeric: tabular-nums; }
+.register tbody tr { transition: background-color var(--dur-1) var(--ease); }
+.register tbody tr:hover { background: var(--paper-sunk); }
+.register tr[data-finding-url] { cursor: pointer; }
+.register tr[data-finding-url] td:first-child { box-shadow: inset 3px 0 0 transparent; transition: box-shadow var(--dur-1) var(--ease); }
+.register tr[data-finding-url]:hover td:first-child,
+.register tr[data-finding-url]:focus-within td:first-child { box-shadow: inset 3px 0 0 var(--ink); }
+.register .cell-title { font-weight: 600; }
+.register .cell-title a { text-decoration: none; }
+.register .cell-title a:hover { text-decoration: underline; }
+.register .cell-sub { color: var(--ink-3); font-size: var(--fs-xs); margin-top: 0.15rem; }
+.register .path { font-family: var(--font-mono); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.register .path .dim { color: var(--ink-3); }
+.article { font-family: var(--font-mono); font-size: var(--fs-xs); white-space: nowrap; }
+
+/* ---- Forms ------------------------------------------------------------- */
+.field { display: grid; gap: var(--s-1); }
+.field label, .field-label { font-size: var(--fs-2xs); font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
+.input, .select, .textarea {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  font-size: var(--fs-sm);
+  transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+.input:hover, .select:hover, .textarea:hover { border-color: var(--ink-3); }
+.input:focus-visible, .select:focus-visible, .textarea:focus-visible {
+  outline: none; border-color: var(--ink); box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink);
+}
+.textarea { resize: vertical; min-height: 5.5rem; line-height: 1.45; }
+.select { appearance: none; padding-right: 2rem;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-2) 50%), linear-gradient(135deg, var(--ink-2) 50%, transparent 50%);
+  background-position: calc(100% - 1rem) 55%, calc(100% - 0.7rem) 55%;
+  background-size: 0.3rem 0.3rem; background-repeat: no-repeat; }
+
+/* ---- Notices ----------------------------------------------------------- */
+.notice { padding: var(--s-3) var(--s-4); border-left: 3px solid var(--ink); background: var(--paper-sunk); font-size: var(--fs-sm); }
+.notice--ok { border-color: var(--ok); }
+.notice--error { border-color: var(--crit); color: var(--crit); background: var(--crit-tint); }
+.notice--info { border-color: var(--med); }
+
+/* ---- Evidence (code excerpt) ------------------------------------------ */
+.evidence { border: 1px solid var(--rule-strong); background: var(--paper-raised); }
+.evidence__head { display: flex; justify-content: space-between; gap: var(--s-3); padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--rule); font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-2); }
+.evidence pre { margin: 0; padding: var(--s-3); overflow-x: auto; font-size: var(--fs-xs); line-height: 1.7; }
+.evidence .ln { display: inline-block; min-width: 2.5rem; padding-right: var(--s-3); color: var(--ink-3); user-select: none; text-align: right; }
+.evidence .hit { box-shadow: inset 3px 0 0 var(--stamp); background: var(--paper-sunk); display: block; margin-inline: calc(var(--s-3) * -1); padding-inline: var(--s-3); }
+
+/* ---- Pager ------------------------------------------------------------- */
+.pager { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); padding: var(--s-3) 0; font-size: var(--fs-xs); color: var(--ink-3); }
+.pager__nav { display: flex; gap: var(--s-2); }
+.pager a, .pager span.is-off { padding: 0.3rem 0.7rem; border: 1px solid var(--rule-strong); border-radius: var(--radius); text-decoration: none; color: var(--ink); font-weight: 500; }
+.pager a:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.pager span.is-off { color: var(--ink-3); border-color: var(--rule); }
+
+/* ---- Timeline (audit trail) ------------------------------------------- */
+.timeline { border-left: 1px solid var(--rule-strong); margin-left: 0.3rem; }
+.timeline li { position: relative; padding: 0 0 var(--s-4) var(--s-4); }
+.timeline li::before { content: ""; position: absolute; left: -0.28rem; top: 0.35rem; width: 0.5rem; height: 0.5rem; background: var(--paper); border: 1px solid var(--ink); }
+.timeline li:first-child::before { background: var(--ink); }
+.timeline .when { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-3); }
+.timeline .note { margin-top: 0.2rem; font-family: var(--font-serif); font-style: italic; font-size: var(--fs-md); color: var(--ink-2); }
+
+/* ---- Empty state ------------------------------------------------------- */
+.empty { padding: var(--s-7) var(--s-5); text-align: center; border-block: 1px solid var(--rule); }
+.empty h3 { font-family: var(--font-serif); font-weight: 500; font-size: var(--fs-xl); letter-spacing: -0.01em; }
+.empty p { margin: var(--s-2) auto 0; max-width: 34rem; color: var(--ink-2); }
+.empty pre { margin: var(--s-5) auto 0; max-width: 34rem; padding: var(--s-3) var(--s-4); text-align: left; background: var(--paper-sunk); border: 1px solid var(--rule); font-size: var(--fs-xs); overflow-x: auto; }
+
+/* ---- htmx request state ------------------------------------------------ */
+#progress { position: fixed; inset: 0 0 auto 0; height: 2px; z-index: 90; background: var(--ink); transform: scaleX(0); transform-origin: left; opacity: 0; }
+#progress.htmx-request { opacity: 1; transform: scaleX(0.85); transition: transform 900ms var(--ease), opacity var(--dur-1); }
+.htmx-added { opacity: 0; }
+.htmx-settling { opacity: 1; transition: opacity var(--dur-2) var(--ease); }
+[aria-busy="true"] { opacity: 0.55; transition: opacity var(--dur-1) var(--ease); }
+
+/* ---- Variants ---------------------------------------------------------- */
+.register--ruled { border-top: 1px solid var(--ink); }
+.pager--top { padding-top: var(--s-3); }
+.hint { font-size: var(--fs-xs); color: var(--ink-3); }
+.stack-top { margin-top: var(--s-3); }

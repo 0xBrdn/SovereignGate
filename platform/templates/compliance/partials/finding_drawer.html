@@ -1,139 +1,105 @@
-<div class="h-full flex flex-col bg-white">
-  <!-- Drawer Header -->
-  <div class="px-5 py-4 border-b border-zinc-200 flex items-start justify-between gap-4 bg-zinc-50">
-    <div>
-      <div class="flex items-center gap-2">
-        {% include "partials/severity_badge.html" with severity=finding.severity %}
-        {% include "partials/jurisdiction_badge.html" with jurisdiction=finding.jurisdiction %}
-        <span class="font-mono-code text-xs text-zinc-500">{{ finding.rule_id }}</span>
-      </div>
-      <h2 class="mt-2 text-sm font-semibold text-zinc-950 leading-snug">{{ finding.title }}</h2>
-      <div class="mt-0.5 text-xs text-zinc-600">Sub-Processor: <span class="font-semibold text-zinc-900">{{ finding.provider }}</span></div>
+<div class="drawer__head">
+  <div>
+    <div class="drawer__badges">
+      {% include "partials/severity_badge.html" with severity=finding.severity %}
+      {% include "partials/jurisdiction_badge.html" with jurisdiction=finding.jurisdiction %}
+      <span class="mono muted">{{ finding.rule_id }}</span>
     </div>
-    <button
-      type="button"
-      @click="drawerOpen = false"
-      class="p-1.5 text-zinc-500 hover:text-zinc-950 border border-zinc-200 bg-white rounded-sm"
-      title="Close inspector"
-    >
-      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="square" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    </button>
+    <h2>{{ finding.title }}</h2>
+    <p>Sub-processor · <strong>{{ finding.provider }}</strong></p>
   </div>
+  <button type="button" class="drawer__close" data-drawer-close aria-label="Close panel">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m2 2 10 10M12 2 2 12"/></svg>
+  </button>
+</div>
 
-  <!-- Drawer Scroll Body -->
-  <div class="flex-1 overflow-y-auto p-5 space-y-5 text-xs">
-    {% if saved_banner %}
-      <div class="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-sm font-mono-code text-[11px]">
-        DPO triage decision saved and persisted across future CI scan runs.
-      </div>
-    {% endif %}
+<div class="drawer__body">
+  {% if saved_banner %}
+    <div class="notice notice--ok" role="status">Decision recorded in the audit trail. It will carry over to future scans of this repository.</div>
+  {% elif unchanged_banner %}
+    <div class="notice notice--info" role="status">No change to record: status and justification are identical.</div>
+  {% endif %}
 
-    <!-- Source Evidence Block -->
-    <div>
-      <div class="flex items-center justify-between mb-1.5">
-        <span class="text-[11px] font-mono-code font-semibold uppercase tracking-wider text-zinc-500">
-          Source Location &amp; Matched Evidence
-        </span>
-        <span class="font-mono-code text-[11px] text-zinc-500">
-          {{ finding.scan_run.repository.name }} · {{ finding.scan_run.branch }}
-        </span>
-      </div>
-      <div class="bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-sm overflow-hidden">
-        <div class="px-3 py-1.5 bg-zinc-900 border-b border-zinc-800 font-mono-code text-[11px] text-zinc-300 flex items-center justify-between">
-          <span>{{ finding.file_path }}:{{ finding.line_number }}</span>
-          <span class="text-zinc-500">{{ finding.target_type }}</span>
-        </div>
-        <pre class="p-3 font-mono-code text-[11px] text-emerald-300 overflow-x-auto leading-relaxed"><code>{{ finding.line_number }} | {{ finding.snippet|default:"(manifest dependency entry)" }}</code></pre>
-      </div>
+  <section class="drawer__section" aria-labelledby="ev-h">
+    <span class="eyebrow" id="ev-h">Evidence · {{ finding.scan_run.repository.name }} · {{ finding.scan_run.branch }}</span>
+    <div class="evidence">
+      <div class="evidence__head"><span>{{ finding.file_path }}:{{ finding.line_number }}</span><span>{{ finding.target_type }}</span></div>
+      <pre><code><span class="hit"><span class="ln">{{ finding.line_number }}</span>{{ finding.snippet|default:"(dependency declared in manifest)" }}</span></code></pre>
     </div>
+  </section>
 
-    <!-- Legal Analysis -->
-    <div>
-      <div class="text-[11px] font-mono-code font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">
-        Applicable Regulatory Provisions
+  <section class="drawer__section" aria-labelledby="law-h">
+    <span class="eyebrow" id="law-h">Applicable provisions</span>
+    <dl class="provisions">
+      {% for ref in finding.legal_references %}
+        <div class="provision">
+          <dt>{{ ref.framework }} — {{ ref.article }}</dt>
+          <dd>{{ ref.summary }}</dd>
+        </div>
+      {% empty %}
+        <div class="provision"><dt>{{ finding.primary_legal_article }}</dt></div>
+      {% endfor %}
+    </dl>
+  </section>
+
+  {% if finding.remediation %}
+    <section class="drawer__section" aria-labelledby="fix-h">
+      <span class="eyebrow" id="fix-h">Remediation</span>
+      <p class="prose">{{ finding.remediation }}</p>
+    </section>
+  {% endif %}
+
+  <section class="drawer__section" aria-labelledby="dec-h">
+    <span class="eyebrow" id="dec-h">DPO decision</span>
+
+    {% if can_triage %}
+      <form class="signoff" hx-post="{% url 'compliance:finding_resolve' finding.id %}" hx-target="#drawer-body" hx-swap="innerHTML" hx-disabled-elt="find button[type='submit']">
+        {% csrf_token %}
+        {% if form_error %}<div class="notice notice--error" role="alert">{{ form_error }}</div>{% endif %}
+
+        <div class="field">
+          <label for="d-status">Status</label>
+          <select id="d-status" class="select" name="resolution_status">
+            {% for value, label in resolution_choices %}
+              <option value="{{ value }}"{% if value == draft_status|default:finding.resolution_status %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="d-note">Justification or DPA reference</label>
+          <textarea id="d-note" class="textarea" name="review_note" maxlength="2000" placeholder="e.g. DPA signed 2026-03-14 · DPF certification verified · EU endpoint pinned">{{ draft_note|default:finding.review_note }}</textarea>
+          <span class="hint">Required for every decision except “Open”.</span>
+        </div>
+
+        <div class="signoff__foot">
+          <span class="muted mono">{% if finding.reviewed_by %}Last by {{ finding.reviewed_by.email }}{% endif %}</span>
+          <button type="submit" class="btn">Record decision</button>
+        </div>
+      </form>
+    {% else %}
+      <div class="notice notice--info">
+        Your role ({{ active_membership.get_role_display }}) can read decisions but not record them. Ask an owner or the DPO.
       </div>
-      <div class="space-y-2">
-        {% for ref in finding.legal_references %}
-          <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-sm">
-            <div class="font-mono-code text-[11px] font-semibold text-zinc-950">
-              {{ ref.framework }} — {{ ref.article }}
-            </div>
-            <p class="mt-1 text-zinc-600 leading-relaxed">{{ ref.summary }}</p>
-          </div>
-        {% empty %}
-          <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-sm font-mono-code text-[11px]">
-            {{ finding.primary_legal_article }}
-          </div>
+      <p class="stack-top">{% include "partials/state_badge.html" with state=finding.resolution_status %}</p>
+      {% if finding.review_note %}<p class="prose">{{ finding.review_note }}</p>{% endif %}
+    {% endif %}
+  </section>
+
+  <section class="drawer__section" aria-labelledby="hist-h">
+    <span class="eyebrow" id="hist-h">Audit trail</span>
+    {% if history %}
+      <ol class="timeline">
+        {% for e in history %}
+          <li>
+            <div>{% include "partials/state_badge.html" with state=e.to_status %} <span class="muted">from {{ e.from_status }}</span></div>
+            <div class="when">{{ e.created_at|date:"Y-m-d H:i" }} · {{ e.actor_email|default:"system" }}</div>
+            {% if e.note %}<p class="note">{{ e.note }}</p>{% endif %}
+          </li>
         {% endfor %}
-      </div>
-    </div>
-
-    <!-- Engineering Remediation -->
-    {% if finding.remediation %}
-      <div>
-        <div class="text-[11px] font-mono-code font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">
-          Technical &amp; Contractual Remediation
-        </div>
-        <div class="p-3 bg-white border border-zinc-300 rounded-sm text-zinc-800 leading-relaxed">
-          {{ finding.remediation }}
-        </div>
-      </div>
+      </ol>
+    {% else %}
+      <p class="muted">No decision recorded for this finding yet.</p>
     {% endif %}
-
-    <!-- DPO Governance Triage Form -->
-    <form
-      hx-post="{% url 'compliance:finding_resolve' finding.id %}"
-      hx-target="#drawer-panel"
-      hx-swap="innerHTML"
-      class="pt-3 border-t border-zinc-200 space-y-3"
-    >
-      {% csrf_token %}
-      <div class="text-[11px] font-mono-code font-semibold uppercase tracking-wider text-zinc-950">
-        DPO Compliance Sign-Off
-      </div>
-
-      <div>
-        <label class="block text-[11px] font-mono-code text-zinc-600 mb-1">Resolution Status</label>
-        <select
-          name="resolution_status"
-          class="w-full px-2.5 py-2 text-xs bg-white border border-zinc-300 rounded-sm font-mono-code focus:outline-none focus:border-zinc-950"
-        >
-          {% for value, label in resolution_choices %}
-            <option value="{{ value }}" {% if finding.resolution_status == value %}selected{% endif %}>
-              {{ label }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div>
-        <label class="block text-[11px] font-mono-code text-zinc-600 mb-1">
-          Audit Justification / DPA Reference ID
-        </label>
-        <textarea
-          name="review_note"
-          rows="3"
-          placeholder="e.g., DPA executed 2026-03-14; EU-US DPF certification verified; EU endpoint pinned."
-          class="w-full px-2.5 py-2 text-xs bg-white border border-zinc-300 rounded-sm focus:outline-none focus:border-zinc-950"
-        >{{ finding.review_note }}</textarea>
-      </div>
-
-      {% if finding.reviewed_by %}
-        <div class="text-[11px] font-mono-code text-zinc-500">
-          Last reviewed by: {{ finding.reviewed_by.email }}
-        </div>
-      {% endif %}
-
-      <div class="flex items-center justify-end gap-2 pt-1">
-        <button
-          type="submit"
-          class="px-4 py-2 bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-semibold uppercase tracking-wider rounded-sm transition-colors"
-        >
-          Save Audit Decision
-        </button>
-      </div>
-    </form>
-  </div>
+  </section>
 </div>

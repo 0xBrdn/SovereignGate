@@ -1,11 +1,16 @@
+"""Scan-report ingestion: validation, normalisation, redaction and persistence."""
+from __future__ import annotations
+
+import re
 from typing import Any
 
+from django.conf import settings
 from django.db import transaction
 from django.utils.text import slugify
 
 from accounts.models import Organization
-from compliance.models import Finding, Repository, ScanRun
-
+from compliance.models import Finding, Repository, ScanRun, TriageEvent
+from compliance.redaction import redact_secrets
 
 SEVERITY_MAP = {
     "critical": Finding.Severity.CRITICAL,
@@ -26,124 +31,204 @@ JURISDICTION_MAP = {
     "CH": Finding.Jurisdiction.CH,
 }
 
+DEFAULT_ARTICLE = "Art. 44 GDPR / Art. 16 nDSG"
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+_MAX_INT = 2_147_483_647
 
-def _normalize_jurisdiction(raw: str | None) -> str:
+
+class PayloadError(ValueError):
+    """The submitted report is structurally invalid (HTTP 422)."""
+
+
+class PayloadTooLarge(PayloadError):
+    """The submitted report exceeds configured limits (HTTP 413)."""
+
+
+# ---------------------------------------------------------------- coercion
+def _text(value: Any, limit: int, default: str = "") -> str:
+    if value is None:
+        return default
+    return _CONTROL_CHARS.sub("", str(value))[:limit]
+
+
+def _int(value: Any, default: int = 0, minimum: int = 0) -> int:
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, min(_MAX_INT, number))
+
+
+def _normalize_jurisdiction(raw: Any) -> str:
     if not raw:
         return Finding.Jurisdiction.NON_ADEQUATE
-    return JURISDICTION_MAP.get(raw.strip().upper(), Finding.Jurisdiction.NON_ADEQUATE)
+    return JURISDICTION_MAP.get(str(raw).strip().upper(), Finding.Jurisdiction.NON_ADEQUATE)
 
 
-def _format_primary_article(legal_refs: list[dict[str, Any]]) -> str:
-    if not legal_refs:
-        return "Art. 44 GDPR / Art. 16 nDSG"
+def _clean_legal_refs(raw: Any) -> list[dict[str, str]]:
+    if not isinstance(raw, list):
+        return []
+    refs = []
+    for ref in raw[:8]:
+        if not isinstance(ref, dict):
+            continue
+        refs.append(
+            {
+                "framework": _text(ref.get("framework"), 40),
+                "article": _text(ref.get("article"), 80),
+                "summary": _text(ref.get("summary"), 600),
+            }
+        )
+    return refs
+
+
+def _format_primary_article(legal_refs: list[dict[str, str]]) -> str:
     parts = []
     for ref in legal_refs[:2]:
-        article = str(ref.get("article", "")).strip()
-        framework = str(ref.get("framework", "")).strip()
+        article, framework = ref["article"].strip(), ref["framework"].strip()
         if article and framework:
             parts.append(f"{article} {framework}")
         elif article:
             parts.append(article)
-    return " · ".join(parts) if parts else "Art. 44 GDPR / Art. 16 nDSG"
+    return " · ".join(parts) if parts else DEFAULT_ARTICLE
 
 
+def _check_count(items: Any, label: str) -> list:
+    if items is None:
+        return []
+    if not isinstance(items, list):
+        raise PayloadError(f"'{label}' must be an array.")
+    limit = settings.SG_MAX_FINDINGS_PER_SCAN
+    if len(items) > limit:
+        raise PayloadTooLarge(f"Report contains {len(items)} entries; the limit is {limit}.")
+    return items
+
+
+# ----------------------------------------------------------------- parsers
 def parse_native_json_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    summary = payload.get("summary") or {}
-    raw_findings = payload.get("findings") or []
+    summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
+    raw_findings = _check_count(payload.get("findings"), "findings")
 
-    parsed_findings = []
-    for item in raw_findings:
-        legal_refs = item.get("legal_references") or []
-        parsed_findings.append(
+    parsed = []
+    for index, item in enumerate(raw_findings):
+        if not isinstance(item, dict):
+            raise PayloadError(f"findings[{index}] must be an object.")
+        legal_refs = _clean_legal_refs(item.get("legal_references"))
+        parsed.append(
             {
-                "rule_id": str(item.get("rule_id", "SG-CUSTOM"))[:32],
-                "title": str(item.get("title", "Cross-Border Data Flow"))[:255],
-                "provider": str(item.get("provider", "Unknown Sub-Processor"))[:160],
-                "category": str(item.get("category", "cloud_infrastructure"))[:64],
-                "severity": SEVERITY_MAP.get(
-                    str(item.get("severity", "medium")).lower(), Finding.Severity.MEDIUM
-                ),
+                "rule_id": _text(item.get("rule_id"), 32, "SG-CUSTOM"),
+                "title": _text(item.get("title"), 255, "Cross-Border Data Flow"),
+                "provider": _text(item.get("provider"), 160, "Unknown Sub-Processor"),
+                "category": _text(item.get("category"), 64, "cloud_infrastructure"),
+                "severity": SEVERITY_MAP.get(str(item.get("severity", "medium")).lower(), Finding.Severity.MEDIUM),
                 "jurisdiction": _normalize_jurisdiction(item.get("jurisdiction")),
-                "target_type": str(item.get("target", "source_code"))[:32],
-                "file_path": str(item.get("file_path", "unknown"))[:512],
-                "line_number": max(1, int(item.get("line", 1))),
-                "snippet": str(item.get("snippet", "")),
-                "matched_indicator": str(item.get("matched_indicator", ""))[:255],
+                "target_type": _text(item.get("target"), 32, "source_code"),
+                "file_path": _text(item.get("file_path"), 512, "unknown"),
+                "line_number": _int(item.get("line"), 1, minimum=1),
+                "snippet": redact_secrets(_text(item.get("snippet"), 2000)),
+                "matched_indicator": _text(item.get("matched_indicator"), 255),
                 "primary_legal_article": _format_primary_article(legal_refs)[:120],
                 "legal_references": legal_refs,
-                "description": str(item.get("description", "")),
-                "remediation": str(item.get("remediation", "")),
+                "description": _text(item.get("description"), 4000),
+                "remediation": _text(item.get("remediation"), 4000),
             }
         )
 
     meta = {
-        "engine_version": str(payload.get("engine_version", "0.1.0"))[:32],
-        "files_scanned": int(summary.get("files_scanned", 0)),
-        "duration_ms": int(summary.get("duration_ms", 0)),
+        "engine_version": _text(payload.get("engine_version"), 32, "0.1.0"),
+        "files_scanned": _int(summary.get("files_scanned")),
+        "duration_ms": _int(summary.get("duration_ms")),
+        "target_path": _text(payload.get("target_path"), 255),
     }
-    return meta, parsed_findings
+    return meta, parsed
 
 
 def parse_sarif_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    runs = payload.get("runs") or []
-    if not runs:
-        return {"engine_version": "0.1.0", "files_scanned": 0, "duration_ms": 0}, []
+    runs = payload.get("runs")
+    if not isinstance(runs, list) or not runs or not isinstance(runs[0], dict):
+        return {"engine_version": "0.1.0", "files_scanned": 0, "duration_ms": 0, "target_path": ""}, []
 
     run = runs[0]
     driver = (run.get("tool") or {}).get("driver") or {}
     rule_lookup: dict[str, dict[str, Any]] = {}
     for descriptor in driver.get("rules") or []:
-        rule_id = descriptor.get("id")
-        if rule_id:
-            rule_lookup[rule_id] = descriptor
+        if isinstance(descriptor, dict) and descriptor.get("id"):
+            rule_lookup[str(descriptor["id"])] = descriptor
 
-    parsed_findings = []
-    for result in run.get("results") or []:
-        rule_id = str(result.get("ruleId", "SG-SARIF"))[:32]
+    results = _check_count(run.get("results"), "runs[0].results")
+    parsed = []
+    for index, result in enumerate(results):
+        if not isinstance(result, dict):
+            raise PayloadError(f"runs[0].results[{index}] must be an object.")
+        rule_id = _text(result.get("ruleId"), 32, "SG-SARIF")
         descriptor = rule_lookup.get(rule_id, {})
-        res_props = result.get("properties") or {}
-        desc_props = descriptor.get("properties") or {}
+        res_props = result.get("properties") if isinstance(result.get("properties"), dict) else {}
+        desc_props = descriptor.get("properties") if isinstance(descriptor.get("properties"), dict) else {}
 
-        locations = result.get("locations") or []
-        phys = (locations[0].get("physicalLocation") if locations else {}) or {}
+        locations = result.get("locations") if isinstance(result.get("locations"), list) else []
+        phys = (locations[0].get("physicalLocation") if locations and isinstance(locations[0], dict) else {}) or {}
         uri = (phys.get("artifactLocation") or {}).get("uri", "unknown")
         region = phys.get("region") or {}
-        line_num = max(1, int(region.get("startLine", 1)))
         snippet = (region.get("snippet") or {}).get("text", "")
 
         raw_sev = res_props.get("severity") or desc_props.get("severity") or result.get("level", "warning")
-        legal_refs = res_props.get("legalReferences") or desc_props.get("legalReferences") or []
+        legal_refs = _clean_legal_refs(res_props.get("legalReferences") or desc_props.get("legalReferences"))
 
-        parsed_findings.append(
+        parsed.append(
             {
                 "rule_id": rule_id,
-                "title": str(descriptor.get("name") or rule_id)[:255],
-                "provider": str(res_props.get("provider") or desc_props.get("provider") or "Unknown")[:160],
-                "category": str(desc_props.get("category") or "third_party")[:64],
+                "title": _text(descriptor.get("name") or rule_id, 255),
+                "provider": _text(res_props.get("provider") or desc_props.get("provider"), 160, "Unknown"),
+                "category": _text(desc_props.get("category"), 64, "third_party"),
                 "severity": SEVERITY_MAP.get(str(raw_sev).lower(), Finding.Severity.MEDIUM),
-                "jurisdiction": _normalize_jurisdiction(
-                    res_props.get("jurisdiction") or desc_props.get("jurisdiction")
-                ),
+                "jurisdiction": _normalize_jurisdiction(res_props.get("jurisdiction") or desc_props.get("jurisdiction")),
                 "target_type": "sarif",
-                "file_path": str(uri)[:512],
-                "line_number": line_num,
-                "snippet": str(snippet),
-                "matched_indicator": str(res_props.get("matchedIndicator", ""))[:255],
+                "file_path": _text(uri, 512, "unknown"),
+                "line_number": _int(region.get("startLine"), 1, minimum=1),
+                "snippet": redact_secrets(_text(snippet, 2000)),
+                "matched_indicator": _text(res_props.get("matchedIndicator"), 255),
                 "primary_legal_article": _format_primary_article(legal_refs)[:120],
                 "legal_references": legal_refs,
-                "description": str((descriptor.get("fullDescription") or {}).get("text", "")),
-                "remediation": str((descriptor.get("help") or {}).get("text", "")),
+                "description": _text((descriptor.get("fullDescription") or {}).get("text"), 4000),
+                "remediation": _text((descriptor.get("help") or {}).get("text"), 4000),
             }
         )
 
     meta = {
-        "engine_version": str(driver.get("version", "0.1.0"))[:32],
+        "engine_version": _text(driver.get("version"), 32, "0.1.0"),
         "files_scanned": 0,
         "duration_ms": 0,
+        "target_path": "",
     }
-    return meta, parsed_findings
+    return meta, parsed
 
 
+# --------------------------------------------------------------- triage carry-over
+def _prior_decisions(repository: Repository, exclude_scan_id) -> dict[str, tuple]:
+    """fingerprint -> (status, reviewer_id, note, reviewed_at).
+
+    Legacy decisions (made before the audit trail existed) come from the previous
+    scan; the append-only TriageEvent log is authoritative and overrides them.
+    """
+    decisions: dict[str, tuple] = {}
+
+    previous = (
+        ScanRun.objects.filter(repository=repository).exclude(pk=exclude_scan_id).order_by("-created_at").first()
+    )
+    if previous:
+        for rule_id, path, indicator, status, reviewer, note, at in previous.findings.exclude(
+            resolution_status=Finding.ResolutionStatus.OPEN
+        ).values_list(
+            "rule_id", "file_path", "matched_indicator", "resolution_status", "reviewed_by_id", "review_note", "reviewed_at"
+        ):
+            decisions[Finding.compute_fingerprint(rule_id, path, indicator)] = (status, reviewer, note, at)
+
+    for event in TriageEvent.objects.filter(repository=repository).order_by("created_at").iterator():
+        decisions[event.fingerprint] = (event.to_status, event.actor_id, event.note, event.created_at)
+    return decisions
+
+
+# ------------------------------------------------------------------ ingestion
 @transaction.atomic
 def ingest_scan_report(
     *,
@@ -153,92 +238,95 @@ def ingest_scan_report(
     commit_sha: str,
     vcs_url: str,
     payload: dict[str, Any],
+    default_branch: str = "",
 ) -> ScanRun:
+    repository_name = _text(repository_name, 200, "default-repository")
+    branch = _text(branch, 120, "main") or "main"
+    commit_sha = _text(commit_sha, 64)
+    vcs_url = _text(vcs_url, 200)
+    default_branch = _text(default_branch, 100)
+
+    is_sarif = payload.get("version") == "2.1.0" and "runs" in payload
+    meta, parsed_findings = parse_sarif_payload(payload) if is_sarif else parse_native_json_payload(payload)
+
     repo_slug = slugify(repository_name)[:200] or "default-repo"
     repository, created = Repository.objects.get_or_create(
         organization=organization,
         slug=repo_slug,
         defaults={
-            "name": repository_name[:200],
-            "vcs_url": vcs_url[:200],
-            "default_branch": branch[:100] or "main",
+            "name": repository_name,
+            "vcs_url": vcs_url,
+            "default_branch": default_branch or "main",
         },
     )
+    changed = []
     if not created and vcs_url and repository.vcs_url != vcs_url:
-        repository.vcs_url = vcs_url[:200]
-        repository.save(update_fields=["vcs_url", "updated_at"])
+        repository.vcs_url = vcs_url
+        changed.append("vcs_url")
+    if not created and default_branch and repository.default_branch != default_branch:
+        repository.default_branch = default_branch
+        changed.append("default_branch")
+    if changed:
+        repository.save(update_fields=[*changed, "updated_at"])
 
-    is_sarif = payload.get("version") == "2.1.0" and "runs" in payload
-    meta, parsed_findings = (
-        parse_sarif_payload(payload) if is_sarif else parse_native_json_payload(payload)
-    )
+    counts = {sev: 0 for sev in Finding.Severity.values}
+    for finding in parsed_findings:
+        counts[finding["severity"]] += 1
 
-    crit = sum(1 for f in parsed_findings if f["severity"] == Finding.Severity.CRITICAL)
-    high = sum(1 for f in parsed_findings if f["severity"] == Finding.Severity.HIGH)
-    med = sum(1 for f in parsed_findings if f["severity"] == Finding.Severity.MEDIUM)
-    low = sum(1 for f in parsed_findings if f["severity"] == Finding.Severity.LOW)
-
-    if crit > 0 or high > 0:
+    if counts["critical"] or counts["high"]:
         status = ScanRun.Status.FAIL
-    elif med > 0 or low > 0:
+    elif counts["medium"] or counts["low"]:
         status = ScanRun.Status.WARN
     else:
         status = ScanRun.Status.PASS
 
+    # Findings and snippets live in Finding rows (redacted); the raw report keeps
+    # only scan metadata, so no unredacted payload is ever persisted.
+    raw_report = {
+        "format": "sarif" if is_sarif else "native",
+        "engine_version": meta["engine_version"],
+        "target_path": meta["target_path"],
+        "summary": {
+            "files_scanned": meta["files_scanned"],
+            "duration_ms": meta["duration_ms"],
+            "total_findings": len(parsed_findings),
+            "unique_subprocessors": sorted({f["provider"] for f in parsed_findings})[:200],
+        },
+    }
+
     scan_run = ScanRun.objects.create(
         repository=repository,
-        commit_sha=commit_sha[:64],
-        branch=branch[:120] or "main",
+        commit_sha=commit_sha,
+        branch=branch,
         engine_version=meta["engine_version"],
         status=status,
         files_scanned=meta["files_scanned"],
         duration_ms=meta["duration_ms"],
-        critical_count=crit,
-        high_count=high,
-        medium_count=med,
-        low_count=low,
-        raw_report=payload,
+        critical_count=counts["critical"],
+        high_count=counts["high"],
+        medium_count=counts["medium"],
+        low_count=counts["low"],
+        raw_report=raw_report,
     )
 
-    # Carry forward prior DPO triage decisions for identical (rule_id, file_path, matched_indicator)
-    prior_resolutions: dict[tuple[str, str, str], tuple[str, Any, str]] = {}
-    previous_scan = (
-        ScanRun.objects.filter(repository=repository)
-        .exclude(pk=scan_run.pk)
-        .order_by("-created_at")
-        .first()
-    )
-    if previous_scan:
-        resolved_qs = previous_scan.findings.exclude(
-            resolution_status=Finding.ResolutionStatus.OPEN
-        ).values_list(
-            "rule_id",
-            "file_path",
-            "matched_indicator",
-            "resolution_status",
-            "reviewed_by_id",
-            "review_note",
-        )
-        for r_id, f_path, indicator, res_status, rev_by, note in resolved_qs:
-            prior_resolutions[(r_id, f_path, indicator)] = (res_status, rev_by, note)
-
-    finding_objects = []
+    decisions = _prior_decisions(repository, exclude_scan_id=scan_run.pk)
+    objects = []
     for item in parsed_findings:
-        key = (item["rule_id"], item["file_path"], item["matched_indicator"])
-        res_status, rev_by, note = prior_resolutions.get(
-            key, (Finding.ResolutionStatus.OPEN, None, "")
+        fingerprint = Finding.compute_fingerprint(item["rule_id"], item["file_path"], item["matched_indicator"])
+        res_status, reviewer_id, note, reviewed_at = decisions.get(
+            fingerprint, (Finding.ResolutionStatus.OPEN, None, "", None)
         )
-        finding_objects.append(
+        objects.append(
             Finding(
                 scan_run=scan_run,
+                fingerprint=fingerprint,
                 resolution_status=res_status,
-                reviewed_by_id=rev_by,
+                reviewed_by_id=reviewer_id,
                 review_note=note,
+                reviewed_at=reviewed_at,
                 **item,
             )
         )
-
-    if finding_objects:
-        Finding.objects.bulk_create(finding_objects)
-
+    if objects:
+        Finding.objects.bulk_create(objects, batch_size=500)
     return scan_run

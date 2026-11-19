@@ -1,0 +1,106 @@
+/* ==========================================================================
+   SovereignGate design tokens — "Registre"
+   A paper-and-ink identity inspired by official registers and land records.
+   One signal colour (stamp red) is reserved for critical transfers.
+   All text/background pairs below meet WCAG AA (>= 4.5:1) in both themes.
+   ========================================================================== */
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces */
+  --paper: #f3f0e9;
+  --paper-raised: #fbf9f5;
+  --paper-sunk: #e8e4da;
+
+  /* Ink */
+  --ink: #15181c;
+  --ink-2: #474a4f;
+  --ink-3: #66635a;
+
+  /* Rules */
+  --rule: #d6d1c4;
+  --rule-strong: #b3ad9c;
+
+  /* Signal colours (text on paper) */
+  --crit: #a8281b;
+  --high: #855400;
+  --med: #34556b;
+  --low: #66635a;
+  --ok: #1d6a4e;
+
+  /* Signal tints (backgrounds for badges) */
+  --crit-tint: #f3dfd9;
+  --high-tint: #f1e5c9;
+  --med-tint: #dde6ec;
+  --low-tint: #e8e4da;
+  --ok-tint: #d9e8df;
+
+  --stamp: #c8321f; /* brand accent: marker, focus on critical only */
+  --focus: #15181c;
+  --btn-bg: var(--ink);
+  --btn-fg: var(--paper-raised);
+  --scrim: rgb(21 24 28 / 0.42);
+
+  /* Type */
+  --font-serif: "Newsreader", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --fs-2xs: 0.6875rem;  /* 11px — eyebrow labels */
+  --fs-xs: 0.75rem;     /* 12px */
+  --fs-sm: 0.8125rem;   /* 13px — tables */
+  --fs-md: 0.9375rem;   /* 15px — body */
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.625rem;
+  --fs-2xl: 2.25rem;
+  --fs-figure: 2.75rem;
+
+  /* Space (4px base) */
+  --s-1: 0.25rem; --s-2: 0.5rem; --s-3: 0.75rem; --s-4: 1rem;
+  --s-5: 1.5rem; --s-6: 2rem; --s-7: 3rem; --s-8: 4.5rem;
+
+  --radius: 2px;
+  --measure: 72rem;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-1: 120ms;
+  --dur-2: 220ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #111315;
+    --paper-raised: #171a1d;
+    --paper-sunk: #0c0e0f;
+
+    --ink: #ece8de;
+    --ink-2: #b9b5aa;
+    --ink-3: #8f8c82;
+
+    --rule: #2a2e31;
+    --rule-strong: #43484c;
+
+    --crit: #ff8f7e;
+    --high: #e2a83b;
+    --med: #8db4cc;
+    --low: #8f8c82;
+    --ok: #6ccba0;
+
+    --crit-tint: #3a1f1b;
+    --high-tint: #382c12;
+    --med-tint: #1c2c37;
+    --low-tint: #1d2023;
+    --ok-tint: #14301f;
+
+    --stamp: #ff6a55;
+    --focus: #ece8de;
+    --btn-bg: var(--ink);
+    --btn-fg: var(--paper);
+    --scrim: rgb(0 0 0 / 0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-1: 0ms; --dur-2: 0ms; }
+}

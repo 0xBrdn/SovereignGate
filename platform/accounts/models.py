@@ -102,6 +102,13 @@ class OrganizationMembership(models.Model):
         unique_together = ("organization", "user")
         ordering = ["organization__name", "user__email"]
 
+    # Only these roles may record a DPO sign-off (triage decision).
+    TRIAGE_ROLES = frozenset({"owner", "dpo"})
+
+    @property
+    def can_triage(self) -> bool:
+        return self.role in self.TRIAGE_ROLES
+
     def __str__(self) -> str:
         return f"{self.user.email} -> {self.organization.slug} ({self.role})"
 

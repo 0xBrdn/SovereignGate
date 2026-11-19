@@ -1,7 +1,6 @@
-# Rust / Cargo
+# Rust / Cargo (Cargo.lock IS committed: this repo ships a binary)
 /engine/target/
 **/*.rs.bk
-Cargo.lock
 
 # Python / Django
 __pycache__/
@@ -16,14 +15,14 @@ __pycache__/
 /platform/db.sqlite3
 *.log
 
-# Node / Tailwind (if compiled locally)
+# Node (if assets are ever compiled locally)
 /platform/node_modules/
-/platform/static/css/output.css
 
-# Environment & Secrets
+# Environment & secrets: only the *.example files are tracked
 .env
 .env.*
 !.env.example
+!.env.prod.example
 
 # IDE & OS
 .vscode/

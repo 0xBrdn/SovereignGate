@@ -1,13 +1,8 @@
 from django.contrib import admin
-from django.http import JsonResponse
 from django.urls import include, path
 
 from compliance.api import ingest_scan_endpoint
-
-
-def healthz(_request):
-    return JsonResponse({"status": "ok", "service": "sovereigngate-platform"})
-
+from config.views import healthz
 
 urlpatterns = [
     path("admin/", admin.site.urls),

@@ -1,13 +1,25 @@
 from datetime import datetime
 from typing import Any
 
-from django.db.models import Count, OuterRef, Q, Subquery
+from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django.template.loader import render_to_string
 from django.utils import timezone
-from weasyprint import HTML
+from weasyprint import HTML, default_url_fetcher
 
 from accounts.models import Organization, User
+from compliance import selectors
 from compliance.models import Finding, Repository, ScanRun
+
+
+def _offline_url_fetcher(url, *args, **kwargs):
+    """The report is self-contained: refuse every network or file fetch.
+
+    Ingested text is attacker-influenced (any holder of an API token can submit
+    it); even though templates auto-escape, never let the PDF renderer reach out.
+    """
+    if url.startswith("data:"):
+        return default_url_fetcher(url, *args, **kwargs)
+    raise ValueError(f"External resource blocked in ROPA rendering: {url[:80]}")
 
 
 TRANSFER_MECHANISM_BY_JURISDICTION = {
@@ -20,26 +32,15 @@ TRANSFER_MECHANISM_BY_JURISDICTION = {
 
 
 def build_ropa_report_context(organization: Organization, generated_by: User) -> dict[str, Any]:
-    latest_scan_subquery = (
-        ScanRun.objects.filter(repository=OuterRef("pk"))
-        .order_by("-created_at")
-        .values("id")[:1]
-    )
-    repositories = list(
-        Repository.objects.filter(organization=organization)
-        .annotate(latest_scan_id=Subquery(latest_scan_subquery))
-        .order_by("name")
-    )
-
-    latest_scan_ids = [r.latest_scan_id for r in repositories if r.latest_scan_id]
-    latest_scans_by_id = {
-        sr.id: sr
+    latest_scan_ids = selectors.current_scan_ids(organization)
+    latest_scans = {
+        sr.repository_id: sr
         for sr in ScanRun.objects.filter(id__in=latest_scan_ids).select_related("repository")
     }
 
     repo_rows = []
-    for repo in repositories:
-        scan = latest_scans_by_id.get(repo.latest_scan_id)
+    for repo in Repository.objects.filter(organization=organization).order_by("name"):
+        scan = latest_scans.get(repo.id)
         repo_rows.append(
             {
                 "name": repo.name,
@@ -54,7 +55,7 @@ def build_ropa_report_context(organization: Organization, generated_by: User) ->
             }
         )
 
-    findings_qs = Finding.objects.filter(scan_run_id__in=latest_scan_ids).select_related(
+    findings_qs = selectors.current_findings(organization, latest_scan_ids).select_related(
         "scan_run__repository", "reviewed_by"
     )
 
@@ -73,16 +74,17 @@ def build_ropa_report_context(organization: Organization, generated_by: User) ->
         .order_by("-open_refs", "provider")
     )
 
+    # One query for the provider -> repositories mapping (was one query per entry).
+    repos_by_provider: dict[tuple[str, str], set[str]] = {}
+    for provider, jurisdiction, repo_name in findings_qs.order_by().values_list(
+        "provider", "jurisdiction", "scan_run__repository__name"
+    ).distinct():
+        repos_by_provider.setdefault((provider, jurisdiction), set()).add(repo_name)
+
     ropa_entries = []
     for idx, entry in enumerate(subprocessor_groups, start=1):
         jurisdiction = entry["jurisdiction"]
-        repo_names = sorted(
-            set(
-                findings_qs.filter(
-                    provider=entry["provider"], jurisdiction=jurisdiction
-                ).values_list("scan_run__repository__name", flat=True)
-            )
-        )
+        repo_names = sorted(repos_by_provider.get((entry["provider"], jurisdiction), set()))
         ropa_entries.append(
             {
                 "activity_code": f"ROPA-{idx:03d}",
@@ -106,7 +108,15 @@ def build_ropa_report_context(organization: Organization, generated_by: User) ->
         findings_qs.filter(
             resolution_status=Finding.ResolutionStatus.OPEN,
             severity__in=[Finding.Severity.CRITICAL, Finding.Severity.HIGH],
-        ).order_by("severity", "file_path", "line_number")[:100]
+        )
+        .annotate(
+            _rank=Case(
+                When(severity=Finding.Severity.CRITICAL, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            )
+        )
+        .order_by("_rank", "file_path", "line_number")[:100]
     )
 
     generated_at: datetime = timezone.now()
@@ -138,9 +148,9 @@ def build_ropa_report_context(organization: Organization, generated_by: User) ->
     }
 
 
-def render_ropa_pdf(organization: Organization, generated_by: User, base_url: str) -> tuple[bytes, str]:
+def render_ropa_pdf(organization: Organization, generated_by: User) -> tuple[bytes, str]:
     context = build_ropa_report_context(organization=organization, generated_by=generated_by)
     html_string = render_to_string("compliance/pdf/ropa_audit_report.html", context)
-    pdf_bytes = HTML(string=html_string, base_url=base_url).write_pdf()
+    pdf_bytes = HTML(string=html_string, url_fetcher=_offline_url_fetcher).write_pdf()
     filename = f"{context['document_ref'].lower()}.pdf"
     return pdf_bytes, filename

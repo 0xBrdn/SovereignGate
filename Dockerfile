@@ -2,11 +2,11 @@
 FROM rust:1.83-slim-bookworm AS rust-builder
 
 WORKDIR /build/engine
-COPY engine/Cargo.toml ./Cargo.toml
+COPY engine/Cargo.toml engine/Cargo.lock ./
 COPY engine/rules ./rules
 COPY engine/src ./src
 
-RUN cargo build --release --locked || cargo build --release
+RUN cargo build --release --locked
 
 # Stage 2: Build Python wheels
 FROM python:3.12-slim-bookworm AS python-builder
@@ -56,7 +56,7 @@ RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
 WORKDIR /app/platform
 COPY --chown=sovereigngate:sovereigngate platform/ /app/platform/
 
-RUN SECRET_KEY=build-only-placeholder python manage.py collectstatic --noinput
+RUN SECRET_KEY=build-only-placeholder-never-used-at-runtime-0000 python manage.py collectstatic --noinput
 
 USER sovereigngate
 

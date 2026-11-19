@@ -1,83 +1,68 @@
-{% load static %}
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sign In — SovereignGate</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="{% static 'css/design-system.css' %}" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Sign in — SovereignGate</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="preload" href="{% static 'fonts/newsreader-latin-400-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components.css' %}">
+  <link rel="stylesheet" href="{% static 'css/pages.css' %}">
 </head>
-<body class="min-h-screen bg-[#FAFAFA] text-[#09090B] flex flex-col justify-center items-center px-4">
-  <div class="w-full max-w-sm">
-    <div class="flex items-center gap-2.5 mb-6">
-      <div class="w-7 h-7 bg-zinc-950 text-white flex items-center justify-center rounded-sm font-mono-code text-xs font-semibold tracking-tighter">
-        SG
-      </div>
+<body>
+  <div class="login">
+    <aside class="login__aside">
+      <span class="brand">{% include "partials/brand_mark.html" %}<span class="brand__name">SovereignGate</span></span>
+
       <div>
-        <div class="text-sm font-semibold tracking-tight text-zinc-950">SovereignGate</div>
-        <div class="text-[11px] font-mono-code text-zinc-500">EU GDPR · CH nDSG AUDIT ENGINE</div>
+        <p class="login__lede">Know where personal data goes <em>before</em> a regulator asks.</p>
+        <p class="login__sub">Cross-border transfer audit for EU GDPR and Swiss nDSG, straight from your code, dependencies and infrastructure.</p>
       </div>
-    </div>
 
-    <div class="sg-card p-6">
-      <h1 class="text-base font-semibold tracking-tight text-zinc-950">DPO &amp; Engineering Access</h1>
-      <p class="mt-1 text-xs text-zinc-500">Authenticate to inspect cross-border data flows and ROPA records.</p>
+      <div class="login__excerpt" aria-hidden="true">
+        <div><span>SG-AI-001</span><span>api.openai.com</span><span>Art. 44 GDPR</span></div>
+        <div><span>SG-PAY-001</span><span>stripe</span><span>Art. 16 nDSG</span></div>
+        <div><span>SG-IAC-001</span><span>us-east-1</span><span>Art. 46 GDPR</span></div>
+      </div>
+    </aside>
 
-      {% if form.errors %}
-        <div class="mt-4 p-2.5 bg-red-50 border border-red-200 rounded-sm text-xs text-red-700 font-medium">
-          Invalid credentials. Verify your corporate email and password.
-        </div>
-      {% endif %}
-
-      <form method="post" action="{% url 'accounts:login' %}" class="mt-5 space-y-4">
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ next }}" />
-
+    <main class="login__main" id="main">
+      <div class="login__card">
         <div>
-          <label for="id_username" class="block text-[11px] font-mono-code font-semibold uppercase tracking-wider text-zinc-700 mb-1.5">
-            Corporate Email
-          </label>
-          <input
-            type="email"
-            name="username"
-            id="id_username"
-            required
-            autofocus
-            placeholder="dpo@enterprise.ch"
-            class="w-full px-3 py-2 text-sm bg-white border border-zinc-300 rounded-sm focus:outline-none focus:border-zinc-950 transition-colors"
-          />
+          <span class="eyebrow">DPO and engineering access</span>
+          <h1>Sign in</h1>
         </div>
 
-        <div>
-          <label for="id_password" class="block text-[11px] font-mono-code font-semibold uppercase tracking-wider text-zinc-700 mb-1.5">
-            Password
-          </label>
-          <input
-            type="password"
-            name="password"
-            id="id_password"
-            required
-            class="w-full px-3 py-2 text-sm bg-white border border-zinc-300 rounded-sm focus:outline-none focus:border-zinc-950 transition-colors"
-          />
-        </div>
+        {% if form.non_field_errors %}
+          <div class="notice notice--error" role="alert">
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+          </div>
+        {% endif %}
 
-        <button
-          type="submit"
-          class="w-full py-2 px-4 bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-semibold uppercase tracking-wider rounded-sm transition-colors"
-        >
-          Authenticate Session
-        </button>
-      </form>
-    </div>
+        <form method="post" action="{% url 'accounts:login' %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ next }}">
 
-    <div class="mt-4 flex items-center justify-between text-[11px] font-mono-code text-zinc-400">
-      <span>AGPLv3 CORE</span>
-      <span>ZURICH · FRANKFURT</span>
-    </div>
+          <div class="field">
+            <label for="id_username">Work email</label>
+            <input class="input" type="email" name="username" id="id_username" required autofocus autocomplete="username"
+                   autocapitalize="none" spellcheck="false" value="{{ form.username.value|default:'' }}" placeholder="dpo@company.ch">
+          </div>
+          <div class="field">
+            <label for="id_password">Password</label>
+            <input class="input" type="password" name="password" id="id_password" required autocomplete="current-password">
+          </div>
+          <button type="submit" class="btn btn--block">Sign in</button>
+        </form>
+
+        <div class="login__foot"><span>AGPLv3 core</span><span>Self-hosted</span></div>
+      </div>
+    </main>
   </div>
 </body>
 </html>

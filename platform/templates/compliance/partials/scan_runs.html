@@ -1,0 +1,31 @@
+<section id="scans" class="section" aria-labelledby="scans-title">
+  <div class="section-head">
+    <h2 id="scans-title">Scan runs</h2>
+    <p>The twelve most recent reports received from CI/CD, across all branches.</p>
+  </div>
+  <div class="table-wrap">
+    <table class="register register--ruled">
+      <caption class="sr-only">Recent scan runs</caption>
+      <thead>
+        <tr>
+          <th scope="col">Repository</th><th scope="col">Branch · commit</th><th scope="col">Result</th>
+          <th scope="col" class="num">Crit / High / Med</th><th scope="col" class="num">Files</th><th scope="col" class="num">Received</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in recent_scans %}
+          <tr>
+            <td class="cell-title">{{ run.repository.name }}</td>
+            <td class="mono">{{ run.branch }}{% if run.commit_sha %} · {{ run.commit_sha|slice:":8" }}{% endif %}</td>
+            <td>{% include "partials/state_badge.html" with state=run.status %}</td>
+            <td class="num mono">{{ run.critical_count }} / {{ run.high_count }} / {{ run.medium_count }}</td>
+            <td class="num mono">{{ run.files_scanned }}</td>
+            <td class="num mono">{{ run.created_at|date:"Y-m-d H:i" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="muted">No scan received yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>

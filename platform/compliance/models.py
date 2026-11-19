@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 
 from django.db import models
@@ -128,6 +129,13 @@ class Finding(models.Model):
         related_name="reviewed_findings",
     )
     review_note = models.TextField(blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    fingerprint = models.CharField(
+        max_length=64,
+        blank=True,
+        db_index=True,
+        help_text="Stable identity of a finding across scans (rule + file + matched indicator).",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -135,7 +143,45 @@ class Finding(models.Model):
         indexes = [
             models.Index(fields=["scan_run", "severity"]),
             models.Index(fields=["scan_run", "jurisdiction"]),
+            models.Index(fields=["scan_run", "resolution_status"]),
         ]
+
+    @staticmethod
+    def compute_fingerprint(rule_id: str, file_path: str, matched_indicator: str) -> str:
+        """Line numbers are deliberately excluded so a finding survives unrelated edits."""
+        raw = "\x1f".join((rule_id, file_path, matched_indicator))
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
     def __str__(self) -> str:
         return f"[{self.severity.upper()}] {self.rule_id} in {self.file_path}:{self.line_number}"
+
+
+class TriageEvent(models.Model):
+    """Append-only audit trail of DPO decisions (accountability, Art. 5(2) GDPR).
+
+    Findings are re-created on every scan; events are keyed by fingerprint so the
+    history of a decision follows the finding across scans.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    repository = models.ForeignKey(
+        Repository, on_delete=models.CASCADE, related_name="triage_events"
+    )
+    fingerprint = models.CharField(max_length=64, db_index=True)
+    rule_id = models.CharField(max_length=32)
+    file_path = models.CharField(max_length=512)
+    from_status = models.CharField(max_length=24, choices=Finding.ResolutionStatus.choices)
+    to_status = models.CharField(max_length=24, choices=Finding.ResolutionStatus.choices)
+    note = models.TextField(blank=True)
+    actor = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="triage_events"
+    )
+    actor_email = models.EmailField(blank=True, help_text="Snapshot kept if the account is deleted.")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["repository", "fingerprint", "-created_at"])]
+
+    def __str__(self) -> str:
+        return f"{self.actor_email or 'system'}: {self.from_status} -> {self.to_status} ({self.rule_id})"
